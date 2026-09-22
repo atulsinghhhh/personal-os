@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/sync/sync_providers.dart';
@@ -27,10 +28,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(ref.read(syncEngineProvider).kick());
-    // If the profile stream hasn't produced a decisive answer in time,
-    // proceed with what we have (offline-first: never block on network).
-    _graceTimer = Timer(const Duration(seconds: 2), () => _decide(null));
+    // Fast path: the local DB already has the profile (any repeat launch) —
+    // ref.listen in build fires almost immediately. Slow path: fresh
+    // install, so wait for the first full sync pass to pull the profile
+    // before deciding. Fallback timer covers the offline-fresh-install case.
+    unawaited(
+      ref.read(syncEngineProvider).kick().then((_) async {
+        final String? userId = ref
+            .read(supabaseClientProvider)
+            .auth
+            .currentUser
+            ?.id;
+        if (userId == null || _navigated) return;
+        _decide(await ref.read(profileRepositoryProvider).get(userId));
+      }),
+    );
+    _graceTimer = Timer(const Duration(seconds: 8), () => _decide(null));
   }
 
   @override

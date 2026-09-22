@@ -1,7 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/focus/presentation/screens/focus_screen.dart';
 import '../../features/future/presentation/screens/future_overview_screen.dart';
+import '../../features/future/presentation/screens/life_area_screen.dart';
+import '../../features/goals/presentation/screens/goal_detail_screen.dart';
+import '../../features/projects/presentation/screens/project_detail_screen.dart';
+import '../../features/projects/presentation/screens/task_detail_screen.dart';
 import '../../features/money/presentation/screens/money_dashboard_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/planning/presentation/screens/plan_screen.dart';
@@ -87,6 +92,41 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               GoRoute(
                 path: RoutePaths.future,
                 builder: (_, _) => const FutureOverviewScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'life-area/:id',
+                    builder: (_, GoRouterState state) => LifeAreaScreen(
+                      lifeAreaId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'goal/:id',
+                    builder: (_, GoRouterState state) => GoalDetailScreen(
+                      goalId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'project/:id',
+                    builder: (_, GoRouterState state) =>
+                        ProjectDetailScreen(
+                      projectId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'task/:id',
+                    builder: (_, GoRouterState state) => TaskDetailScreen(
+                      taskId: state.pathParameters['id']!,
+                    ),
+                    routes: <RouteBase>[
+                      GoRoute(
+                        path: 'focus',
+                        builder: (_, GoRouterState state) => FocusScreen(
+                          taskId: state.pathParameters['id']!,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
