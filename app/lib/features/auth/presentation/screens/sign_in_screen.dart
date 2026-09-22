@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/tokens/spacing.dart';
 import '../../../../core/design_system/tokens/typography.dart';
 import '../../../../core/design_system/widgets/app_button.dart';
 import '../../../../core/design_system/widgets/app_text_field.dart';
+import '../../../../core/routing/route_paths.dart';
 import '../controllers/auth_controller.dart';
-import 'sign_up_screen.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -88,11 +89,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   AppButton(
                     label: "Don't have an account? Sign up",
                     variant: AppButtonVariant.text,
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SignUpScreen(),
-                      ),
-                    ),
+                    onPressed: () => context.push(RoutePaths.signUp),
                   ),
                 ],
               ),
