@@ -7,6 +7,7 @@ import '../../features/future/presentation/screens/life_area_screen.dart';
 import '../../features/goals/presentation/screens/goal_detail_screen.dart';
 import '../../features/projects/presentation/screens/project_detail_screen.dart';
 import '../../features/projects/presentation/screens/task_detail_screen.dart';
+import '../../features/money/presentation/money_routes.dart';
 import '../../features/money/presentation/screens/money_dashboard_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/planning/presentation/screens/plan_screen.dart';
@@ -136,6 +137,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               GoRoute(
                 path: RoutePaths.money,
                 builder: (_, _) => const MoneyDashboardScreen(),
+                routes: moneySubRoutes,
               ),
             ],
           ),
