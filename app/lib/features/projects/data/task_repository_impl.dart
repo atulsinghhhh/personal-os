@@ -221,7 +221,7 @@ class DriftTaskRepository implements TaskRepository {
 
   static Map<String, dynamic> toWire(Task task) {
     String? dateOnly(DateTime? value) =>
-        value == null ? null : value.toIso8601String().substring(0, 10);
+        value?.toIso8601String().substring(0, 10);
 
     return <String, dynamic>{
       'id': task.id,
