@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/ai/presentation/screens/ai_planning_screen.dart';
 import '../../features/focus/presentation/screens/focus_screen.dart';
 import '../../features/future/presentation/screens/future_overview_screen.dart';
 import '../../features/future/presentation/screens/life_area_screen.dart';
@@ -86,6 +87,12 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               GoRoute(
                 path: RoutePaths.plan,
                 builder: (_, _) => const PlanScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'ai',
+                    builder: (_, _) => const AiPlanningScreen(),
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/tokens/spacing.dart';
 import '../widgets/day_planner_view.dart';
@@ -22,7 +23,16 @@ class _PlanScreenState extends State<PlanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Plan')),
+      appBar: AppBar(
+        title: const Text('Plan'),
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'AI planning',
+            icon: const Icon(Icons.auto_awesome_outlined),
+            onPressed: () => context.go('/plan/ai'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
