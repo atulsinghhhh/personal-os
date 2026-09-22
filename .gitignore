@@ -1,5 +1,6 @@
 # Env / secrets
 app/env/local.json
+app/env/local.*.json
 .env
 .env.*
 !app/env/local.example.json
@@ -16,6 +17,7 @@ app/ios/.symlinks/
 app/ios/Flutter/Flutter.framework
 app/ios/Flutter/Flutter.podspec
 app/android/.gradle/
+app/android/.kotlin/
 app/android/local.properties
 app/**/*.g.dart
 app/**/*.freezed.dart
