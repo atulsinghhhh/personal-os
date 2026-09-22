@@ -4,11 +4,16 @@ import '../transactions/domain/entities/transaction_entities.dart';
 import 'screens/account_detail_screen.dart';
 import 'screens/accounts_list_screen.dart';
 import 'screens/add_transaction_screen.dart';
+import 'screens/bills_screen.dart';
 import 'screens/budget_detail_screen.dart';
 import 'screens/budgets_list_screen.dart';
 import 'screens/conflicts_screen.dart';
+import 'screens/debts_screen.dart';
 import 'screens/financial_goals_screen.dart';
+import 'screens/money_analytics_screen.dart';
+import 'screens/net_worth_screen.dart';
 import 'screens/savings_goals_screen.dart';
+import 'screens/subscriptions_screen.dart';
 import 'screens/transaction_detail_screen.dart';
 import 'screens/transactions_list_screen.dart';
 
@@ -71,5 +76,25 @@ final List<RouteBase> moneySubRoutes = <RouteBase>[
   GoRoute(
     path: 'financial-goals',
     builder: (_, _) => const FinancialGoalsScreen(),
+  ),
+  GoRoute(
+    path: 'bills',
+    builder: (_, _) => const BillsScreen(),
+  ),
+  GoRoute(
+    path: 'subscriptions',
+    builder: (_, _) => const SubscriptionsScreen(),
+  ),
+  GoRoute(
+    path: 'debts',
+    builder: (_, _) => const DebtsScreen(),
+  ),
+  GoRoute(
+    path: 'net-worth',
+    builder: (_, _) => const NetWorthScreen(),
+  ),
+  GoRoute(
+    path: 'analytics',
+    builder: (_, _) => const MoneyAnalyticsScreen(),
   ),
 ];

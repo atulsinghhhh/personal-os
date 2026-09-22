@@ -42,14 +42,41 @@ class MoneyDashboardScreen extends ConsumerWidget {
             onPressed: () => context.go('/money/budgets'),
           ),
           IconButton(
-            tooltip: 'Savings goals',
-            icon: const Icon(Icons.savings_outlined),
-            onPressed: () => context.go('/money/savings-goals'),
+            tooltip: 'Analytics',
+            icon: const Icon(Icons.query_stats),
+            onPressed: () => context.go('/money/analytics'),
           ),
-          IconButton(
-            tooltip: 'Financial goals',
-            icon: const Icon(Icons.flag_outlined),
-            onPressed: () => context.go('/money/financial-goals'),
+          PopupMenuButton<String>(
+            tooltip: 'More money features',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (String route) => context.go(route),
+            itemBuilder: (BuildContext context) =>
+                const <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: '/money/savings-goals',
+                child: Text('Savings goals'),
+              ),
+              PopupMenuItem<String>(
+                value: '/money/financial-goals',
+                child: Text('Financial goals'),
+              ),
+              PopupMenuItem<String>(
+                value: '/money/bills',
+                child: Text('Bills'),
+              ),
+              PopupMenuItem<String>(
+                value: '/money/subscriptions',
+                child: Text('Subscriptions'),
+              ),
+              PopupMenuItem<String>(
+                value: '/money/debts',
+                child: Text('Debt'),
+              ),
+              PopupMenuItem<String>(
+                value: '/money/net-worth',
+                child: Text('Net worth'),
+              ),
+            ],
           ),
         ],
       ),
