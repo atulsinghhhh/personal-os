@@ -53,6 +53,10 @@ class _QuickCaptureBodyState extends ConsumerState<_QuickCaptureBody> {
     setState(() => _saving = true);
 
     final DateTime now = DateTime.now().toUtc();
+    // Calendar dates use LOCAL components in a UTC container — the user's
+    // "today", not UTC's (which can differ around midnight).
+    final DateTime local = DateTime.now();
+    final DateTime today = DateTime.utc(local.year, local.month, local.day);
     final String id = const Uuid().v4();
 
     try {
@@ -66,7 +70,7 @@ class _QuickCaptureBodyState extends ConsumerState<_QuickCaptureBody> {
                   title: _text.text.trim(),
                   status: TaskStatus.todo,
                   priority: 0,
-                  scheduledDate: DateTime.utc(now.year, now.month, now.day),
+                  scheduledDate: today,
                   actualMinutes: 0,
                   sortOrder: 0,
                   createdAt: now,

@@ -8,6 +8,7 @@ import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/sync/sync_providers.dart';
+import '../../../../features/settings/data/profile_repository.dart';
 import '../../../../shared/models/profile.dart';
 
 /// Decides where a signed-in user lands: onboarding if their profile hasn't
@@ -34,13 +35,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // before deciding. Fallback timer covers the offline-fresh-install case.
     unawaited(
       ref.read(syncEngineProvider).kick().then((_) async {
+        // The widget may have unmounted (fast path already navigated);
+        // touching ref then throws.
+        if (!mounted || _navigated) return;
         final String? userId = ref
             .read(supabaseClientProvider)
             .auth
             .currentUser
             ?.id;
-        if (userId == null || _navigated) return;
-        _decide(await ref.read(profileRepositoryProvider).get(userId));
+        if (userId == null) return;
+        final ProfileRepository profiles =
+            ref.read(profileRepositoryProvider);
+        final Profile? profile = await profiles.get(userId);
+        if (mounted) _decide(profile);
       }),
     );
     _graceTimer = Timer(const Duration(seconds: 8), () => _decide(null));

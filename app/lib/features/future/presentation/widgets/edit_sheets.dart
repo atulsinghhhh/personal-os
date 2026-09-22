@@ -241,6 +241,8 @@ Future<void> showTaskSheet(
           final String? userId = _currentUserId(ref);
           if (userId == null) return;
           final DateTime now = DateTime.now().toUtc();
+          // Local calendar date in a UTC container — the user's "today".
+          final DateTime local = DateTime.now();
           await ref.read(taskRepositoryProvider).create(
                 Task(
                   id: const Uuid().v4(),
@@ -250,7 +252,7 @@ Future<void> showTaskSheet(
                   status: TaskStatus.todo,
                   priority: 0,
                   scheduledDate: scheduleToday
-                      ? DateTime.utc(now.year, now.month, now.day)
+                      ? DateTime.utc(local.year, local.month, local.day)
                       : null,
                   actualMinutes: 0,
                   sortOrder: 0,
