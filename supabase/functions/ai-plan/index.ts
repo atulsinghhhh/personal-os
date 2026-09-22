@@ -14,7 +14,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = Deno.env.get("GROQ_MODEL") ?? "llama-3.3-70b-versatile";
+const MODEL = Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b";
 
 interface PlanRequest {
   mode: "daily" | "weekly" | "financial";

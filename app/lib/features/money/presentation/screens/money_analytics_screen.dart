@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 import '../../../../core/design_system/theme/theme_extensions.dart';
 import '../../../../core/design_system/tokens/spacing.dart';
 import '../../../../core/design_system/tokens/typography.dart';
+import '../../../../core/design_system/widgets/app_button.dart';
 import '../../../../core/design_system/widgets/app_card.dart';
 import '../../../../core/design_system/widgets/app_chart.dart';
 import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../../shared/models/money.dart';
+import '../../../ai/data/ai_planning_service.dart';
 import '../../transactions/domain/entities/transaction_entities.dart';
 import '../widgets/money_ui.dart';
 
@@ -212,6 +214,20 @@ class MoneyAnalyticsScreen extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
+              const SizedBox(height: AppSpacing.xl),
+              Text('AI INSIGHTS', style: _label(context)),
+              const SizedBox(height: AppSpacing.sm),
+              _AiInsightsSection(
+                currency: currency,
+                thisMonthExpense:
+                    expenseByMonth.isEmpty ? 0 : expenseByMonth.last,
+                lastMonthExpense: expenseByMonth.length < 2
+                    ? 0
+                    : expenseByMonth[expenseByMonth.length - 2],
+                thisMonthIncome:
+                    incomeByMonth.isEmpty ? 0 : incomeByMonth.last,
+                topCategories: topCategories,
+              ),
             ],
           );
         },
@@ -224,4 +240,122 @@ class MoneyAnalyticsScreen extends ConsumerWidget {
         color: Theme.of(context).colorScheme.onSurfaceVariant,
         letterSpacing: 1.2,
       );
+}
+
+/// AI explains the user's own recorded numbers (never advice, never
+/// fabricated figures — see supabase/functions/ai-plan). Opt-in via button,
+/// same pattern as AI planning: nothing happens until the user asks.
+class _AiInsightsSection extends ConsumerStatefulWidget {
+  const _AiInsightsSection({
+    required this.currency,
+    required this.thisMonthExpense,
+    required this.lastMonthExpense,
+    required this.thisMonthIncome,
+    required this.topCategories,
+  });
+
+  final String currency;
+  final double thisMonthExpense;
+  final double lastMonthExpense;
+  final double thisMonthIncome;
+  final List<MapEntry<String, double>> topCategories;
+
+  @override
+  ConsumerState<_AiInsightsSection> createState() =>
+      _AiInsightsSectionState();
+}
+
+class _AiInsightsSectionState extends ConsumerState<_AiInsightsSection> {
+  bool _loading = false;
+  List<dynamic>? _insights;
+  String? _error;
+
+  Future<void> _generate() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _insights = null;
+    });
+
+    final Map<String, dynamic> context = <String, dynamic>{
+      'currency': widget.currency,
+      'this_month_expense': widget.thisMonthExpense,
+      'last_month_expense': widget.lastMonthExpense,
+      'this_month_income': widget.thisMonthIncome,
+      'top_categories_this_month': <Map<String, dynamic>>[
+        for (final MapEntry<String, double> entry
+            in widget.topCategories.take(5))
+          <String, dynamic>{'category': entry.key, 'amount': entry.value},
+      ],
+    };
+
+    final AiPlanResult result = await ref
+        .read(aiPlanningServiceProvider)
+        .propose(mode: 'financial', context: context);
+
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (result.isOk) {
+        _insights = result.proposal!['insights'] as List<dynamic>?;
+      } else {
+        _error = result.errorMessage;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Have the assistant explain this month\'s numbers — it only '
+            'restates and does arithmetic on your recorded data, never '
+            'advice.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            label: _loading ? 'Thinking…' : 'Explain my spending',
+            variant: AppButtonVariant.secondary,
+            onPressed: _loading ? null : _generate,
+          ),
+          if (_error != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _error!,
+              style: AppTypography.bodyMedium.copyWith(
+                color: context.semanticColors.warning,
+              ),
+            ),
+          ],
+          if (_insights != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            for (final dynamic insight in _insights!)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      ((insight as Map)['title'] as String?) ?? '',
+                      style: AppTypography.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      (insight['detail'] as String?) ?? '',
+                      style: AppTypography.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
 }
