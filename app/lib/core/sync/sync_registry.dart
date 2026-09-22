@@ -60,6 +60,11 @@ const List<SyncTableSpec> syncTables = <SyncTableSpec>[
   SyncTableSpec(tableName: 'budget_items', policy: ConflictPolicy.lastWriteWins),
   SyncTableSpec(tableName: 'savings_goals', policy: ConflictPolicy.lastWriteWins),
   SyncTableSpec(tableName: 'financial_goals', policy: ConflictPolicy.lastWriteWins),
+  SyncTableSpec(tableName: 'bills', policy: ConflictPolicy.lastWriteWins),
+  SyncTableSpec(tableName: 'subscriptions', policy: ConflictPolicy.lastWriteWins),
+  SyncTableSpec(tableName: 'debts', policy: ConflictPolicy.lastWriteWins),
+  SyncTableSpec(tableName: 'assets', policy: ConflictPolicy.lastWriteWins),
+  SyncTableSpec(tableName: 'net_worth_snapshots', policy: ConflictPolicy.lastWriteWins),
 ];
 
 /// Resolves a table name from the registry to its Drift [TableInfo] so the
@@ -120,6 +125,16 @@ TableInfo<Table, dynamic> driftTableByName(AppDatabase db, String name) {
       return db.savingsGoals;
     case 'financial_goals':
       return db.financialGoals;
+    case 'bills':
+      return db.bills;
+    case 'subscriptions':
+      return db.subscriptions;
+    case 'debts':
+      return db.debts;
+    case 'assets':
+      return db.assets;
+    case 'net_worth_snapshots':
+      return db.netWorthSnapshots;
     default:
       throw ArgumentError('Unknown sync table: $name');
   }

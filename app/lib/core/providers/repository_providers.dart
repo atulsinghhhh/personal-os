@@ -14,6 +14,16 @@ import '../../features/goals/data/goal_repository_impl.dart';
 import '../../features/goals/domain/repositories/goal_repositories.dart';
 import '../../features/money/accounts/data/account_repository_impl.dart';
 import '../../features/money/accounts/domain/repositories/account_repository.dart';
+import '../../features/money/assets/data/asset_repository_impl.dart';
+import '../../features/money/assets/domain/repositories/asset_repository.dart';
+import '../../features/money/bills/data/bill_repository_impl.dart';
+import '../../features/money/bills/domain/repositories/bill_repository.dart';
+import '../../features/money/debts/data/debt_repository_impl.dart';
+import '../../features/money/debts/domain/repositories/debt_repository.dart';
+import '../../features/money/net_worth/data/net_worth_repository_impl.dart';
+import '../../features/money/net_worth/domain/repositories/net_worth_repository.dart';
+import '../../features/money/subscriptions/data/subscription_repository_impl.dart';
+import '../../features/money/subscriptions/domain/repositories/subscription_repository.dart';
 import '../../features/money/budgets/data/budget_repository_impl.dart';
 import '../../features/money/budgets/domain/repositories/budget_repository.dart';
 import '../../features/money/financial_goals/data/financial_goal_repository_impl.dart';
@@ -254,6 +264,51 @@ final Provider<FinancialGoalRepository> financialGoalRepositoryProvider =
 final Provider<NoteRepository> noteRepositoryProvider =
     Provider<NoteRepository>((Ref ref) {
   return DriftNoteRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(outboxWriterProvider),
+    _kicker(ref),
+  );
+});
+
+final Provider<BillRepository> billRepositoryProvider =
+    Provider<BillRepository>((Ref ref) {
+  return DriftBillRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(outboxWriterProvider),
+    _kicker(ref),
+  );
+});
+
+final Provider<SubscriptionRepository> subscriptionRepositoryProvider =
+    Provider<SubscriptionRepository>((Ref ref) {
+  return DriftSubscriptionRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(outboxWriterProvider),
+    _kicker(ref),
+  );
+});
+
+final Provider<DebtRepository> debtRepositoryProvider =
+    Provider<DebtRepository>((Ref ref) {
+  return DriftDebtRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(outboxWriterProvider),
+    _kicker(ref),
+  );
+});
+
+final Provider<AssetRepository> assetRepositoryProvider =
+    Provider<AssetRepository>((Ref ref) {
+  return DriftAssetRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(outboxWriterProvider),
+    _kicker(ref),
+  );
+});
+
+final Provider<NetWorthRepository> netWorthRepositoryProvider =
+    Provider<NetWorthRepository>((Ref ref) {
+  return DriftNetWorthRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(outboxWriterProvider),
     _kicker(ref),
