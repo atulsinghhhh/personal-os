@@ -90,6 +90,7 @@ class ProjectDetailScreen extends ConsumerWidget {
                               ),
                             ),
                             secondary: IconButton(
+                              tooltip: 'Open task',
                               icon: const Icon(Icons.chevron_right),
                               onPressed: () => context
                                   .go('/future/task/${task.id}'),
