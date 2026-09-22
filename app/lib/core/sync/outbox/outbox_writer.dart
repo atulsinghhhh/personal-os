@@ -24,16 +24,42 @@ class OutboxWriter {
     required Map<String, dynamic> payload,
     DateTime? baseServerUpdatedAt,
   }) async {
-    // Supersede any still-pending rows for the same entity: the new payload
-    // is a full row snapshot, so pushing stale intermediate states is
-    // wasted work (conflict/in-flight rows are left alone).
-    await (_db.delete(_db.syncOutbox)..where(
-          ($SyncOutboxTable t) =>
-              t.entityId.equals(entityId) &
-              t.entityTable.equals(entityTable) &
-              t.status.equals('pending'),
-        ))
-        .go();
+    // Supersede any still-pending row for the same entity IN PLACE: the new
+    // payload is a full row snapshot, so pushing the stale intermediate
+    // state is wasted work — but the row must keep its original queue
+    // position, otherwise a superseded parent (e.g. a task edited after a
+    // focus session referencing it was queued) would push AFTER its
+    // children and hit foreign-key violations server-side. If the pending
+    // row was an insert, it stays an insert (the row doesn't exist
+    // server-side yet). Conflict/in-flight rows are left alone.
+    final SyncOutboxData? pending = await (_db.select(_db.syncOutbox)
+          ..where(
+            ($SyncOutboxTable t) =>
+                t.entityId.equals(entityId) &
+                t.entityTable.equals(entityTable) &
+                t.status.equals('pending'),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+
+    if (pending != null) {
+      await (_db.update(_db.syncOutbox)
+            ..where(($SyncOutboxTable t) => t.id.equals(pending.id)))
+          .write(
+        SyncOutboxCompanion(
+          operation: Value<String>(
+            pending.operation == 'insert' ? 'insert' : operation,
+          ),
+          payload: Value<String>(jsonEncode(payload)),
+          baseServerUpdatedAt: Value<DateTime?>(
+            baseServerUpdatedAt ?? pending.baseServerUpdatedAt,
+          ),
+          attemptCount: const Value<int>(0),
+          lastError: const Value<String?>(null),
+        ),
+      );
+      return;
+    }
 
     await _db
         .into(_db.syncOutbox)
