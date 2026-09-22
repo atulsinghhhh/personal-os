@@ -25,6 +25,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
         title: const Text('Review'),
         actions: <Widget>[
           IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.push('/review/search'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.insights_outlined),
+            tooltip: 'Trajectory',
+            onPressed: () => context.push('/review/trajectory'),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
             onPressed: () => context.push('/review/settings'),

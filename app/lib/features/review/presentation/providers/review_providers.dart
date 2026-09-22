@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/misc.dart' show StreamProviderFamily;
 
 import '../../../../core/providers/repository_providers.dart';
 import '../../../focus/domain/entities/focus_session.dart';
+import '../../../goals/domain/entities/goal_entities.dart';
 import '../../../money/transactions/domain/entities/transaction_entities.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 import '../../domain/entities/review_entities.dart';
@@ -68,4 +69,52 @@ final StreamProviderFamily<List<MoneyTransaction>, DateTime>
   return ref
       .watch(transactionRepositoryProvider)
       .watchForRange(date, date.add(const Duration(days: 1)));
+});
+
+/// Transactions in [start, start+days) — used by week/month context cards.
+final StreamProviderFamily<List<MoneyTransaction>, (DateTime, int)>
+    reviewTransactionsForRangeProvider = StreamProvider.family<
+        List<MoneyTransaction>, (DateTime, int)>((Ref ref, (DateTime, int) key) {
+  final (DateTime start, int days) = key;
+  return ref
+      .watch(transactionRepositoryProvider)
+      .watchForRange(start, start.add(Duration(days: days)));
+});
+
+/// Focus minutes in [start, start+days).
+final StreamProviderFamily<int, (DateTime, int)>
+    reviewFocusMinutesForRangeProvider =
+    StreamProvider.family<int, (DateTime, int)>((Ref ref, (DateTime, int) key) {
+  final (DateTime start, int days) = key;
+  return ref
+      .watch(focusSessionRepositoryProvider)
+      .watchForDateRange(start, start.add(Duration(days: days)))
+      .map(
+        (List<FocusSession> sessions) => sessions.fold<int>(
+          0,
+          (int total, FocusSession session) =>
+              total + (session.durationMinutes ?? 0),
+        ),
+      );
+});
+
+/// All tasks — the week/month views filter client-side by scheduledDate,
+/// since watchScheduledForDate only covers a single day.
+final StreamProvider<List<Task>> reviewAllTasksProvider =
+    StreamProvider<List<Task>>((Ref ref) {
+  return ref.watch(taskRepositoryProvider).watchAll();
+});
+
+/// All goals — used to approximate "achieved this week/month" by status
+/// plus updatedAt falling in range (a labeled approximation, not an exact
+/// achieved-date field).
+final StreamProvider<List<Goal>> reviewAllGoalsProvider =
+    StreamProvider<List<Goal>>((Ref ref) {
+  return ref.watch(goalRepositoryProvider).watchAll();
+});
+
+/// All projects — used to approximate "completed this month".
+final StreamProvider<List<Project>> reviewAllProjectsProvider =
+    StreamProvider<List<Project>>((Ref ref) {
+  return ref.watch(projectRepositoryProvider).watchAll();
 });
