@@ -1,0 +1,7 @@
+-- Local dev seed data. Default transaction categories are NOT seeded here
+-- because they are per-user (transaction_categories.user_id is not null),
+-- so they can't be inserted before a user exists. Instead, the app seeds a
+-- default category set client-side into Drift + the outbox the first time a
+-- new user completes onboarding (see features/money/categories). This file
+-- is reserved for future dev-only fixture data (e.g. a demo user) and is
+-- intentionally empty for Phase 1.
