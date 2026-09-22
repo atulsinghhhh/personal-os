@@ -133,7 +133,17 @@ class SyncEngine {
           jsonDecode(row.payload) as Map<String, dynamic>;
 
       try {
-        if (row.entityTable == 'transactions' &&
+        if (row.operation == 'delete') {
+          // Hard delete (only task_dependencies uses this; soft-deleted
+          // tables push tombstone updates instead).
+          await _client
+              .from(row.entityTable)
+              .delete()
+              .eq('id', row.entityId);
+          await (_db.delete(_db.syncOutbox)
+                ..where(($SyncOutboxTable t) => t.id.equals(row.id)))
+              .go();
+        } else if (row.entityTable == 'transactions' &&
             row.operation == 'update' &&
             row.baseServerUpdatedAt != null) {
           await _pushTransactionUpdate(row, payload);
@@ -315,6 +325,8 @@ class SyncEngine {
     final String? userId = _currentUserId();
     if (userId == null) return;
 
+    await _pullProfile(userId);
+
     for (final SyncTableSpec spec in syncTables) {
       final DateTime? watermark = await _watermarkFor(spec.tableName);
 
@@ -348,6 +360,19 @@ class SyncEngine {
             ),
           );
     }
+  }
+
+  /// Profiles sit outside the generic registry (keyed by the auth user id,
+  /// one row per user). Never overwrite a locally-dirty profile — the
+  /// pending push wins.
+  Future<void> _pullProfile(String userId) async {
+    final bool dirty = await _isLocallyDirty(_db.profiles, userId);
+    if (dirty) return;
+
+    final List<Map<String, dynamic>> rows =
+        await _client.from('profiles').select().eq('id', userId).limit(1);
+    if (rows.isEmpty) return;
+    await _applyServerRow('profiles', rows.first, markClean: true);
   }
 
   Future<void> _applyPulledRow(

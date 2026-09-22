@@ -66,6 +66,8 @@ const List<SyncTableSpec> syncTables = <SyncTableSpec>[
 /// engine can run generic upserts during pull.
 TableInfo<Table, dynamic> driftTableByName(AppDatabase db, String name) {
   switch (name) {
+    case 'profiles':
+      return db.profiles;
     case 'life_areas':
       return db.lifeAreas;
     case 'visions':

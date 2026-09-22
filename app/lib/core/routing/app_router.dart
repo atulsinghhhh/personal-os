@@ -39,8 +39,9 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       if (!signedIn) {
         return goingToAuth ? null : RoutePaths.signIn;
       }
-      if (goingToAuth || location == RoutePaths.splash) {
-        return RoutePaths.today;
+      if (goingToAuth) {
+        // Splash owns the onboarding-completed check and routes onward.
+        return RoutePaths.splash;
       }
       return null;
     },
