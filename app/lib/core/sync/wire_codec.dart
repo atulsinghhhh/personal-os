@@ -36,9 +36,7 @@ abstract final class WireCodec {
 
       switch (column.type) {
         case DriftSqlType.dateTime:
-          values[name] = Variable<DateTime>(
-            raw is DateTime ? raw.toUtc() : DateTime.parse(raw as String).toUtc(),
-          );
+          values[name] = Variable<DateTime>(_parseWireDateTime(raw));
         case DriftSqlType.bool:
           values[name] = Variable<bool>(raw as bool);
         case DriftSqlType.int:
@@ -63,4 +61,17 @@ abstract final class WireCodec {
   /// ISO 8601 UTC string for wire payloads.
   static String toWireTimestamp(DateTime value) =>
       value.toUtc().toIso8601String();
+
+  /// Postgres `date` columns arrive as bare 'YYYY-MM-DD' strings, which
+  /// DateTime.parse would interpret as LOCAL midnight (shifting the
+  /// calendar day when converted to UTC). Date-only values are calendar
+  /// dates: parse them as UTC midnight, matching how the app writes them.
+  static DateTime _parseWireDateTime(dynamic raw) {
+    if (raw is DateTime) return raw.toUtc();
+    final String value = raw as String;
+    if (value.length == 10) {
+      return DateTime.parse('${value}T00:00:00Z');
+    }
+    return DateTime.parse(value).toUtc();
+  }
 }
