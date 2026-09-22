@@ -9,6 +9,9 @@ import '../../../../core/providers/repository_providers.dart';
 import '../../../../core/routing/route_paths.dart';
 import '../../../../core/sync/sync_providers.dart';
 import '../../../../features/settings/data/profile_repository.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/luma_icons.dart';
+import '../../../../luma/widgets/luma_logo.dart';
 import '../../../../shared/models/profile.dart';
 
 /// Decides where a signed-in user lands: onboarding if their profile hasn't
@@ -76,8 +79,47 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (profile != null) _decide(profile);
     });
 
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    // Design 01 "Splash": brand lockup centered, privacy note at the bottom.
+    return Scaffold(
+      backgroundColor: LumaColors.ground,
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LumaLogo(size: 76),
+                const SizedBox(height: 22),
+                Text('Luma', style: lumaSerif(size: 40, height: 1)),
+                const SizedBox(height: 22),
+                Text(
+                  'PLAN · DO · REVIEW',
+                  style: lumaSans(
+                    size: 13,
+                    color: LumaColors.ink3,
+                    letterSpacing: 13 * 0.08,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 48,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const LumaIcon(LumaIcons.lock,
+                    size: 14, color: LumaColors.ink3),
+                const SizedBox(width: 8),
+                Text('Private by design',
+                    style: lumaSans(size: 12.5, color: LumaColors.ink3)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

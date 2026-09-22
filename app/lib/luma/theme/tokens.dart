@@ -1,31 +1,37 @@
 import 'package:flutter/widgets.dart';
 
+import '../../core/design_system/tokens/colors.dart';
+
+export '../../core/design_system/tokens/colors.dart' show AppColors;
+
 /// Design tokens from design/luma-design.html `<script id="luma-tokens">`.
+/// Color values are canonical in [AppColors]; these aliases keep call sites
+/// readable with the design's own names.
 abstract final class LumaColors {
   // color.light
-  static const Color ground = Color(0xFFF5F3EE);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color sunken = Color(0xFFEAE7E0);
-  static const Color hairline = Color(0xFFE1DDD4);
-  static const Color ink = Color(0xFF1B1B19);
-  static const Color ink2 = Color(0xFF57544D);
-  static const Color ink3 = Color(0xFF6F6B62);
-  static const Color accent = Color(0xFF2F4F8F);
-  static const Color accentSoft = Color(0xFFE3E8F2);
+  static const Color ground = AppColors.ground;
+  static const Color surface = AppColors.surface;
+  static const Color sunken = AppColors.sunken;
+  static const Color hairline = AppColors.hairline;
+  static const Color ink = AppColors.ink;
+  static const Color ink2 = AppColors.ink2;
+  static const Color ink3 = AppColors.ink3;
+  static const Color accent = AppColors.accent;
+  static const Color accentSoft = AppColors.accentSoft;
 
   // color.dark
-  static const Color darkGround = Color(0xFF121211);
-  static const Color darkSurface = Color(0xFF1C1C1A);
-  static const Color darkHairline = Color(0xFF2B2A27);
-  static const Color darkInk = Color(0xFFEEECE6);
-  static const Color darkInk2 = Color(0xFFA9A69D);
-  static const Color darkAccent = Color(0xFF94ABDD);
+  static const Color darkGround = AppColors.darkGround;
+  static const Color darkSurface = AppColors.darkSurface;
+  static const Color darkHairline = AppColors.darkHairline;
+  static const Color darkInk = AppColors.darkInk;
+  static const Color darkInk2 = AppColors.darkInk2;
+  static const Color darkAccent = AppColors.darkAccent;
 
   // color.semantic
-  static const Color positive = Color(0xFF2E7250);
-  static const Color negative = Color(0xFFA33F2B);
-  static const Color neutral = Color(0xFF57544D);
-  static const Color warning = Color(0xFF8E6210);
+  static const Color positive = AppColors.incomeLight;
+  static const Color negative = AppColors.expenseLight;
+  static const Color neutral = AppColors.ink2;
+  static const Color warning = AppColors.warningLight;
 }
 
 abstract final class LumaFonts {

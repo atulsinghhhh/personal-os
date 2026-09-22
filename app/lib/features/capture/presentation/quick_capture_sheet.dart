@@ -1,30 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../../core/design_system/tokens/spacing.dart';
-import '../../../core/design_system/widgets/app_button.dart';
-import '../../../core/design_system/widgets/app_sheet.dart';
-import '../../../core/design_system/widgets/app_text_field.dart';
+
 import '../../../core/design_system/widgets/currency_input.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../luma/theme/tokens.dart';
+import '../../../luma/widgets/buttons.dart';
+import '../../../luma/widgets/luma_icons.dart';
 import '../../../shared/models/money.dart';
 import '../../money/accounts/domain/entities/financial_account.dart';
 import '../../money/transactions/domain/entities/transaction_entities.dart';
 import '../../notes/domain/entities/note.dart';
 import '../../projects/domain/entities/project_entities.dart';
 
-/// Global quick capture: task, expense, or note. Expenses are amount-first
-/// per the product spec — type the number, pick a category-ish note later.
+/// Design 09 "Quick capture": bottom sheet with a big serif input, type
+/// chips and one save action. Task, expense, or note — expenses are
+/// amount-first per the product spec.
 Future<void> showQuickCaptureSheet(BuildContext context) {
-  return showAppBottomSheet<void>(
+  return showModalBottomSheet<void>(
     context: context,
-    title: 'Quick capture',
+    isScrollControlled: true,
+    backgroundColor: LumaColors.ground,
+    barrierColor: const Color(0x521B1B19),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
     builder: (_) => const _QuickCaptureBody(),
   );
 }
 
-enum _CaptureMode { task, expense, note }
+enum _CaptureMode { task, note, expense }
 
 class _QuickCaptureBody extends ConsumerStatefulWidget {
   const _QuickCaptureBody();
@@ -38,6 +44,18 @@ class _QuickCaptureBodyState extends ConsumerState<_QuickCaptureBody> {
   final TextEditingController _text = TextEditingController();
   final TextEditingController _amount = TextEditingController();
   bool _saving = false;
+
+  static const Map<_CaptureMode, String> _labels = <_CaptureMode, String>{
+    _CaptureMode.task: 'Task',
+    _CaptureMode.note: 'Note',
+    _CaptureMode.expense: 'Expense',
+  };
+
+  static const Map<_CaptureMode, String> _hints = <_CaptureMode, String>{
+    _CaptureMode.task: 'Scheduled for today',
+    _CaptureMode.note: 'Saved to Inbox · sort later',
+    _CaptureMode.expense: 'Amount · category · account',
+  };
 
   @override
   void dispose() {
@@ -153,56 +171,155 @@ class _QuickCaptureBodyState extends ConsumerState<_QuickCaptureBody> {
     final String currency =
         ref.watch(currentProfileProvider).value?.defaultCurrency ?? 'USD';
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        SegmentedButton<_CaptureMode>(
-          segments: const <ButtonSegment<_CaptureMode>>[
-            ButtonSegment<_CaptureMode>(
-              value: _CaptureMode.task,
-              label: Text('Task'),
-              icon: Icon(Icons.check_circle_outline),
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 34),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Center(
+              child: Container(
+                width: 38,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: LumaColors.hairline,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
             ),
-            ButtonSegment<_CaptureMode>(
-              value: _CaptureMode.expense,
-              label: Text('Expense'),
-              icon: Icon(Icons.remove_circle_outline),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text('CAPTURE', style: lumaEyebrow()),
+                Semantics(
+                  label: 'Close',
+                  button: true,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    behavior: HitTestBehavior.opaque,
+                    child: const SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: LumaIcon(LumaIcons.close,
+                            size: 20, color: LumaColors.ink2),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            ButtonSegment<_CaptureMode>(
-              value: _CaptureMode.note,
-              label: Text('Note'),
-              icon: Icon(Icons.sticky_note_2_outlined),
+            if (_mode == _CaptureMode.expense) ...<Widget>[
+              CurrencyInput(currencyCode: currency, controller: _amount),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _text,
+                style: lumaSerif(size: 28, height: 1.15),
+                cursorColor: LumaColors.ink,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  hintText: 'What was it for? (optional)',
+                  hintStyle: lumaSerif(
+                      size: 28, height: 1.15, color: LumaColors.ink3),
+                ),
+              ),
+            ] else
+              TextField(
+                controller: _text,
+                autofocus: true,
+                maxLines: _mode == _CaptureMode.note ? 3 : 1,
+                style: lumaSerif(size: 28, height: 1.15),
+                cursorColor: LumaColors.ink,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  hintText: _mode == _CaptureMode.task
+                      ? 'What needs doing?'
+                      : 'Write it down…',
+                  hintStyle: lumaSerif(
+                      size: 28, height: 1.15, color: LumaColors.ink3),
+                ),
+              ),
+            const SizedBox(height: 20),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: Row(
+                children: <Widget>[
+                  for (final _CaptureMode mode in _CaptureMode.values) ...<Widget>[
+                    if (mode != _CaptureMode.values.first)
+                      const SizedBox(width: 8),
+                    LumaChip(
+                      label: _labels[mode]!,
+                      selected: _mode == mode,
+                      onTap: () => setState(() => _mode = mode),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: <Widget>[
+                const LumaIcon(LumaIcons.sparkle,
+                    size: 16, color: LumaColors.ink2),
+                const SizedBox(width: 8),
+                Text(_hints[_mode]!,
+                    style: lumaSans(size: 13, color: LumaColors.ink2)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(height: 1, color: LumaColors.hairline),
+            const SizedBox(height: 20),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: LumaPrimaryButton(
+                    label: _saving ? 'Saving…' : 'Save ${_labels[_mode]!}',
+                    height: 52,
+                    onTap: _saving ? null : _save,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Semantics(
+                  label: 'More options',
+                  button: true,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: LumaColors.hairline),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Center(
+                      child: LumaIcon(LumaIcons.ellipsis,
+                          size: 20, color: LumaColors.ink2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Capture first. Everything can be organized later from Inbox.',
+              textAlign: TextAlign.center,
+              style: lumaSans(size: 12.5, color: LumaColors.ink3),
             ),
           ],
-          selected: <_CaptureMode>{_mode},
-          onSelectionChanged: (Set<_CaptureMode> selection) =>
-              setState(() => _mode = selection.first),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        if (_mode == _CaptureMode.expense) ...<Widget>[
-          CurrencyInput(currencyCode: currency, controller: _amount),
-          const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            controller: _text,
-            hint: 'What was it for? (optional)',
-          ),
-        ] else
-          AppTextField(
-            controller: _text,
-            hint: _mode == _CaptureMode.task
-                ? 'What needs doing?'
-                : 'Write it down…',
-            autofocus: true,
-            maxLines: _mode == _CaptureMode.note ? 3 : 1,
-          ),
-        const SizedBox(height: AppSpacing.lg),
-        AppButton(
-          label: _saving ? 'Saving…' : 'Save',
-          expand: true,
-          onPressed: _saving ? null : _save,
-        ),
-      ],
+      ),
     );
   }
 }

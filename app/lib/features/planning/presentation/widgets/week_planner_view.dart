@@ -5,12 +5,12 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/design_system/tokens/spacing.dart';
 import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_button.dart';
 import '../../../../core/design_system/widgets/app_card.dart';
-import '../../../../core/design_system/widgets/app_text_field.dart';
 import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/buttons.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 import '../../domain/entities/plan_entities.dart';
 import '../providers/plan_providers.dart';
@@ -44,8 +44,9 @@ class _WeekPlannerViewState extends ConsumerState<WeekPlannerView> {
       ),
       children: <Widget>[
         PlannerNavHeader(
-          label:
-              '${DateFormat('MMM d').format(_weekStart)} – ${DateFormat('MMM d, yyyy').format(weekEnd)}',
+          label: 'This week',
+          sub:
+              '${DateFormat('MMMM d').format(_weekStart)} – ${DateFormat('d').format(weekEnd)} · Week ${_weekNumber(_weekStart)}',
           onPrevious: () => setState(
             () => _weekStart = _weekStart.subtract(const Duration(days: 7)),
           ),
@@ -121,34 +122,32 @@ class _WeeklyPlanCardState extends ConsumerState<_WeeklyPlanCard> {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          AppTextField(
-            label: 'Outcomes',
-            hint: 'What must be true by Sunday?',
-            controller: _outcomes,
-            maxLines: 3,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _PromptField(
+          label: 'Outcomes',
+          hint: '“What must be true by Sunday?”',
+          controller: _outcomes,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        _PromptField(
+          label: 'Reflection',
+          hint: '“Notes as the week unfolds…”',
+          controller: _reflection,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: LumaTextButton(
+            label: _saving ? 'Saving…' : 'Save',
+            height: 36,
+            fontSize: 14,
+            color: LumaColors.accent,
+            onTap: _saving ? null : _save,
           ),
-          const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            label: 'Reflection',
-            hint: 'Notes as the week unfolds…',
-            controller: _reflection,
-            maxLines: 3,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: AppButton(
-              label: 'Save',
-              variant: AppButtonVariant.secondary,
-              onPressed: _saving ? null : _save,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -255,40 +254,119 @@ class _CarryOverList extends ConsumerWidget {
     ];
 
     if (carryOver.isEmpty) {
-      return const AppCard(
-        child: Text('Nothing unfinished from last week.'),
-      );
+      return Text('Nothing unfinished from last week.',
+          style: lumaSans(size: 13, color: LumaColors.ink3));
     }
 
-    return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Column(
-        children: <Widget>[
-          for (final Task task in carryOver)
-            ListTile(
-              dense: true,
-              title: Text(task.title, style: AppTypography.bodyLarge),
-              subtitle: Text(
-                'Was ${DateFormat('EEE, MMM d').format(utcDate(task.scheduledDate!))}',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              trailing: AppButton(
-                label: 'Move here',
-                variant: AppButtonVariant.text,
-                onPressed: () {
-                  ref.read(taskRepositoryProvider).update(
-                        task.copyWith(
-                          scheduledDate: weekStart,
-                          updatedAt: DateTime.now().toUtc(),
-                        ),
-                      );
-                },
-              ),
+    return Column(
+      children: <Widget>[
+        for (int i = 0; i < carryOver.length; i++)
+          Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            decoration: BoxDecoration(
+              border: i > 0
+                  ? const Border(
+                      top: BorderSide(color: LumaColors.hairline))
+                  : null,
             ),
-        ],
-      ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(carryOver[i].title,
+                          style:
+                              lumaSans(size: 15, weight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Was ${DateFormat('EEE, MMM d').format(utcDate(carryOver[i].scheduledDate!))}',
+                        style:
+                            lumaSans(size: 12.5, color: LumaColors.ink3),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    ref.read(taskRepositoryProvider).update(
+                          carryOver[i].copyWith(
+                            scheduledDate: weekStart,
+                            updatedAt: DateTime.now().toUtc(),
+                          ),
+                        );
+                  },
+                  child: SizedBox(
+                    height: 44,
+                    child: Center(
+                      child: Text('Move here',
+                          style: lumaSans(
+                              size: 13,
+                              weight: FontWeight.w500,
+                              color: LumaColors.accent)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
+}
+
+/// Bold label over an underlined serif field — the design's prompt voice.
+class _PromptField extends StatelessWidget {
+  const _PromptField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(label, style: lumaSans(size: 14, weight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Container(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: LumaColors.hairline)),
+          ),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: TextField(
+            controller: controller,
+            maxLines: 3,
+            minLines: 1,
+            style: lumaSerif(size: 21, height: 1.4),
+            cursorColor: LumaColors.ink,
+            decoration: InputDecoration(
+              isCollapsed: true,
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              hintText: hint,
+              hintStyle:
+                  lumaSerif(size: 21, height: 1.4, color: LumaColors.ink3),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ISO-8601 week number for the week containing [date].
+int _weekNumber(DateTime date) {
+  final DateTime thursday = date.add(Duration(days: 4 - (date.weekday == 7 ? 7 : date.weekday)));
+  final DateTime firstDay = DateTime(thursday.year, 1, 1);
+  return ((thursday.difference(firstDay).inDays) ~/ 7) + 1;
 }

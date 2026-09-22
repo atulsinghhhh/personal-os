@@ -49,7 +49,8 @@ class _MonthPlannerViewState extends ConsumerState<MonthPlannerView> {
       ),
       children: <Widget>[
         PlannerNavHeader(
-          label: DateFormat('MMMM yyyy').format(_month),
+          label: DateFormat('MMMM').format(_month),
+          sub: DateFormat('yyyy').format(_month),
           onPrevious: () => setState(
             () => _month = DateTime.utc(_month.year, _month.month - 1),
           ),

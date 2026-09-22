@@ -65,8 +65,12 @@ class AuthController extends _$AuthController {
 
   Future<void> signOut() async {
     state = const AsyncLoading<void>();
-    state = await AsyncValue.guard(() async {
-      await ref.read(supabaseClientProvider).auth.signOut();
+    final SupabaseClient client = ref.read(supabaseClientProvider);
+    final AsyncValue<void> result = await AsyncValue.guard(() async {
+      await client.auth.signOut();
     });
+    // Signing out rebuilds the router onto auth screens, which can dispose
+    // this provider before the call completes — only publish if still alive.
+    if (ref.mounted) state = result;
   }
 }

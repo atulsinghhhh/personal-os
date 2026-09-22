@@ -3,16 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/design_system/theme/theme_extensions.dart';
-import '../../../../core/design_system/tokens/spacing.dart';
-import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_button.dart';
-import '../../../../core/design_system/widgets/app_card.dart';
-import '../../../../core/design_system/widgets/app_list_row.dart';
-import '../../../../core/design_system/widgets/app_sheet.dart';
-import '../../../../core/design_system/widgets/app_text_field.dart';
-import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../core/routing/route_paths.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/buttons.dart';
+import '../../../../luma/widgets/luma_icons.dart';
+import '../../../../luma/widgets/primitives.dart';
+import '../../../../luma/widgets/rows.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 import '../../accounts/domain/entities/financial_account.dart';
 import '../../transactions/domain/entities/transaction_entities.dart';
@@ -31,65 +28,35 @@ class TransactionDetailScreen extends ConsumerWidget {
         ref.watch(moneyTransactionByIdProvider(transactionId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transaction'),
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Delete',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: transaction.value == null ||
-                    transaction.value!.deletedAt != null
-                ? null
-                : () => _confirmDelete(context, ref),
-          ),
-        ],
-      ),
+      backgroundColor: LumaColors.ground,
       body: transaction.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object error, _) =>
-            ErrorStateView(message: 'Could not load this transaction.'),
+        error: (Object error, _) => Center(
+            child: Text('Could not load this transaction.',
+                style: lumaSans(size: 14, color: LumaColors.ink3))),
         data: (MoneyTransaction? data) {
           if (data == null || data.deletedAt != null) {
-            return const EmptyStateView(message: 'Transaction not found.');
+            return Center(
+                child: Text('Transaction not found.',
+                    style: lumaSans(size: 14, color: LumaColors.ink3)));
           }
-          return _TransactionDetailBody(transaction: data);
+          return _TransactionDetailBody(
+            transactionId: transactionId,
+            transaction: data,
+          );
         },
       ),
     );
   }
-
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete transaction?'),
-          content: const Text(
-            'It will be removed from balances and reports. This syncs to '
-            'your other devices.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-    if (confirmed != true) return;
-    await ref.read(transactionRepositoryProvider).delete(transactionId);
-    if (context.mounted) context.go('/money/transactions');
-  }
 }
 
 class _TransactionDetailBody extends ConsumerWidget {
-  const _TransactionDetailBody({required this.transaction});
+  const _TransactionDetailBody({
+    required this.transactionId,
+    required this.transaction,
+  });
 
+  final String transactionId;
   final MoneyTransaction transaction;
 
   @override
@@ -98,148 +65,127 @@ class _TransactionDetailBody extends ConsumerWidget {
         ref.watch(moneyCategoriesProvider).value ?? <TransactionCategory>[];
     final List<FinancialAccount> accounts =
         ref.watch(moneyAllAccountsProvider).value ?? <FinancialAccount>[];
-    final List<Project> projects =
-        ref.watch(moneyProjectsProvider).value ?? <Project>[];
+    final List<Project> projects = ref.watch(moneyProjectsProvider).value ?? <Project>[];
 
     final TransactionCategory? category = _categoryOf(categories);
     final Project? project = _projectOf(projects);
 
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 110),
       children: <Widget>[
-        if (transaction.conflictState ==
-            TransactionConflictState.pendingReview) ...<Widget>[
-          AppCard(
-            color: context.semanticColors.conflict.withValues(alpha: 0.12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            SizedBox(
+              height: 44,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.canPop()
+                    ? context.pop()
+                    : context.go('${RoutePaths.money}/transactions'),
+                child: Row(
+                  children: <Widget>[
+                    const LumaIcon(LumaIcons.chevronLeft,
+                        size: 22, color: LumaColors.ink2),
+                    const SizedBox(width: 2),
+                    Text('Back', style: lumaSans(size: 15, color: LumaColors.ink2)),
+                  ],
+                ),
+              ),
+            ),
+            if (transaction.deletedAt == null)
+              Semantics(
+                label: 'Delete',
+                button: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _confirmDelete(context, ref),
+                  child: const SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: LumaIcon(LumaIcons.close, size: 20, color: LumaColors.negative),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        if (transaction.conflictState == TransactionConflictState.pendingReview) ...<Widget>[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: LumaColors.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(LumaRadius.button),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: context.semanticColors.conflict,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'This transaction has a sync conflict',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: context.semanticColors.conflict,
-                        ),
-                      ),
-                    ),
+                    const LumaIcon(LumaIcons.flag, size: 15, color: LumaColors.warning),
+                    const SizedBox(width: 8),
+                    Text('Sync conflict',
+                        style: lumaSans(
+                            size: 14, weight: FontWeight.w500, color: LumaColors.warning)),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: 8),
                 Text(
-                  'It was edited on another device too. Review both versions '
-                  'and choose what to keep.',
-                  style: AppTypography.bodyMedium,
+                  'It was edited on another device too. Review both versions and choose what to keep.',
+                  style: lumaSans(size: 13, color: LumaColors.ink2),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                AppButton(
-                  label: 'Resolve conflict',
-                  expand: true,
-                  onPressed: () => context.go('/money/conflicts'),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () => context.go('/money/conflicts'),
+                  child: Text('Resolve conflict',
+                      style: lumaSans(
+                          size: 13, weight: FontWeight.w500, color: LumaColors.accent)),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
         ],
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                transactionKindLabel(transaction.kind).toUpperCase(),
-                style: AppTypography.labelSmall.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              SignedAmountText(
-                transaction: transaction,
-                style: AppTypography.currencyLarge,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                DateFormat('EEEE, MMM d, y · HH:mm')
-                    .format(transaction.occurredAt.toLocal()),
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
+        const SizedBox(height: 20),
+        LumaEyebrow(transactionKindLabel(transaction.kind)),
+        const SizedBox(height: 10),
+        SignedAmountText(
+          transaction: transaction,
+          style: lumaSerif(size: LumaType.metric, height: 1),
         ),
-        const SizedBox(height: AppSpacing.xl),
-        Text('DETAILS', style: moneySectionLabel(context)),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: Column(
-            children: <Widget>[
-              AppListRow(
-                title: 'Account',
-                subtitle: _accountName(accounts),
-                dense: true,
-                leading: const Icon(Icons.account_balance_outlined),
-              ),
-              AppListRow(
-                title: 'Category',
-                subtitle: category?.name ?? 'None',
-                dense: true,
-                leading: const Icon(Icons.category_outlined),
-                trailing: const Icon(Icons.edit_outlined, size: 18),
-                onTap: () => _editCategory(context, ref, categories),
-              ),
-              AppListRow(
-                title: 'Project',
-                subtitle: project?.title ?? 'Not linked',
-                dense: true,
-                leading: const Icon(Icons.folder_outlined),
-                trailing: const Icon(Icons.edit_outlined, size: 18),
-                onTap: () => _editProject(context, ref, projects),
-              ),
-              AppListRow(
-                title: 'Note',
-                subtitle: (transaction.note?.isNotEmpty ?? false)
-                    ? transaction.note
-                    : 'No note',
-                dense: true,
-                leading: const Icon(Icons.notes_outlined),
-                trailing: const Icon(Icons.edit_outlined, size: 18),
-                onTap: () => _editNote(context, ref),
-              ),
-            ],
-          ),
+        const SizedBox(height: 8),
+        Text(
+          DateFormat('EEEE, MMM d, y · HH:mm').format(transaction.occurredAt.toLocal()),
+          style: lumaSans(size: 13, color: LumaColors.ink3),
         ),
-        const SizedBox(height: AppSpacing.xl),
-        Text('RECORD', style: moneySectionLabel(context)),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: Column(
-            children: <Widget>[
-              AppListRow(
-                title: 'Created',
-                subtitle: DateFormat.yMMMd()
-                    .add_Hm()
-                    .format(transaction.createdAt.toLocal()),
-                dense: true,
-              ),
-              AppListRow(
-                title: 'Last updated',
-                subtitle: DateFormat.yMMMd()
-                    .add_Hm()
-                    .format(transaction.updatedAt.toLocal()),
-                dense: true,
-              ),
-            ],
-          ),
+        const SizedBox(height: 28),
+        const LumaEyebrow('Details'),
+        LumaMetaRow(label: 'Account', value: _accountName(accounts)),
+        LumaMetaRow(
+          label: 'Category',
+          value: category?.name ?? 'None',
+          onTap: () => _editCategory(context, ref, categories),
+        ),
+        LumaMetaRow(
+          label: 'Project',
+          value: project?.title ?? 'Not linked',
+          onTap: () => _editProject(context, ref, projects),
+        ),
+        LumaMetaRow(
+          label: 'Note',
+          value: (transaction.note?.isNotEmpty ?? false) ? transaction.note! : 'No note',
+          onTap: () => _editNote(context, ref),
+        ),
+        const SizedBox(height: 28),
+        const LumaEyebrow('Record'),
+        LumaMetaRow(
+          label: 'Created',
+          value: DateFormat.yMMMd().add_Hm().format(transaction.createdAt.toLocal()),
+        ),
+        LumaMetaRow(
+          label: 'Last updated',
+          value: DateFormat.yMMMd().add_Hm().format(transaction.updatedAt.toLocal()),
         ),
       ],
     );
@@ -266,11 +212,38 @@ class _TransactionDetailBody extends ConsumerWidget {
     return 'Unknown account';
   }
 
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete transaction?'),
+          content: const Text(
+            'It will be removed from balances and reports. This syncs to your other devices.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    await ref.read(transactionRepositoryProvider).delete(transactionId);
+    if (context.mounted) context.go('/money/transactions');
+  }
+
   Future<void> _save(WidgetRef ref, MoneyTransaction updated) async {
     final DateTime now = DateTime.now().toUtc();
-    await ref.read(transactionRepositoryProvider).update(
-          updated.copyWith(clientUpdatedAt: now, updatedAt: now),
-        );
+    await ref
+        .read(transactionRepositoryProvider)
+        .update(updated.copyWith(clientUpdatedAt: now, updatedAt: now));
   }
 
   Future<void> _editCategory(
@@ -278,14 +251,11 @@ class _TransactionDetailBody extends ConsumerWidget {
     WidgetRef ref,
     List<TransactionCategory> categories,
   ) async {
-    final CategoryKind kind = transaction.kind == TransactionKind.income
-        ? CategoryKind.income
-        : CategoryKind.expense;
-    final List<TransactionCategory> matching = categories
-        .where((TransactionCategory c) => c.kind == kind)
-        .toList(growable: false);
-    final TransactionCategory? picked =
-        await showCategoryPicker(context, categories: matching);
+    final CategoryKind kind =
+        transaction.kind == TransactionKind.income ? CategoryKind.income : CategoryKind.expense;
+    final List<TransactionCategory> matching =
+        categories.where((TransactionCategory c) => c.kind == kind).toList(growable: false);
+    final TransactionCategory? picked = await showCategoryPicker(context, categories: matching);
     if (picked == null) return;
     await _save(ref, transaction.copyWith(categoryId: picked.id));
   }
@@ -295,48 +265,72 @@ class _TransactionDetailBody extends ConsumerWidget {
     WidgetRef ref,
     List<Project> projects,
   ) async {
-    final ProjectPick? picked = await showProjectPicker(
-      context,
-      projects: projects,
-      allowClear: true,
-    );
+    final ProjectPick? picked =
+        await showProjectPicker(context, projects: projects, allowClear: true);
     if (picked == null) return;
     await _save(ref, transaction.copyWith(projectId: picked.project?.id));
   }
 
   Future<void> _editNote(BuildContext context, WidgetRef ref) async {
-    final TextEditingController note =
-        TextEditingController(text: transaction.note ?? '');
-    await showAppBottomSheet<void>(
+    final TextEditingController note = TextEditingController(text: transaction.note ?? '');
+    await showModalBottomSheet<void>(
       context: context,
-      title: 'Edit note',
+      isScrollControlled: true,
+      backgroundColor: LumaColors.ground,
+      barrierColor: const Color(0x521B1B19),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (BuildContext sheetContext) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            AppTextField(
-              controller: note,
-              hint: 'What was it for?',
-              autofocus: true,
-              maxLines: 3,
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 34),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: LumaColors.hairline,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const LumaEyebrow('Edit note'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: note,
+                  autofocus: true,
+                  maxLines: 3,
+                  style: lumaSans(size: 15),
+                  cursorColor: LumaColors.ink,
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    hintText: 'What was it for?',
+                    hintStyle: lumaSans(size: 15, color: LumaColors.ink3),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                LumaPrimaryButton(
+                  label: 'Save',
+                  height: 52,
+                  onTap: () async {
+                    final String value = note.text.trim();
+                    await _save(ref, transaction.copyWith(note: value.isEmpty ? null : value));
+                    if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            AppButton(
-              label: 'Save',
-              expand: true,
-              onPressed: () async {
-                final String value = note.text.trim();
-                await _save(
-                  ref,
-                  transaction.copyWith(note: value.isEmpty ? null : value),
-                );
-                if (sheetContext.mounted) {
-                  Navigator.of(sheetContext).pop();
-                }
-              },
-            ),
-          ],
+          ),
         );
       },
     );

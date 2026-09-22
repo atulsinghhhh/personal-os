@@ -1,100 +1,151 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/design_system/tokens/spacing.dart';
-import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_button.dart';
-import '../../../../core/design_system/widgets/app_card.dart';
-import '../../../../core/design_system/widgets/app_text_field.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/buttons.dart';
+import '../../../../luma/widgets/luma_icons.dart';
+import '../../../../luma/widgets/primitives.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 
-/// Small shared building blocks for the four planner sub-views.
+/// Small shared building blocks for the four planner sub-views, in the Luma
+/// style: serif period titles, 44px chevron targets, hairline rows.
 
-/// Prev/next chevrons around a period label (day, week, month, year).
+/// Serif period title with prev/next chevrons on the right (design 12).
 class PlannerNavHeader extends StatelessWidget {
   const PlannerNavHeader({
     super.key,
     required this.label,
     required this.onPrevious,
     required this.onNext,
+    this.sub,
   });
 
   final String label;
+  final String? sub;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          tooltip: 'Previous',
-          onPressed: onPrevious,
-        ),
         Expanded(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppTypography.titleMedium,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(label, style: lumaSerif(size: 38, height: 1.05)),
+              if (sub != null) ...<Widget>[
+                const SizedBox(height: 4),
+                Text(sub!, style: lumaSans(size: 14, color: LumaColors.ink2)),
+              ],
+            ],
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          tooltip: 'Next',
-          onPressed: onNext,
+        Transform.translate(
+          offset: const Offset(10, 0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _NavChevron(
+                  icon: LumaIcons.chevronLeft,
+                  label: 'Previous',
+                  onTap: onPrevious),
+              _NavChevron(
+                  icon: LumaIcons.chevronRight, label: 'Next', onTap: onNext),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-/// Section label matching the Today screen's uppercase style.
-TextStyle plannerSectionLabel(BuildContext context) {
-  return AppTypography.labelMedium.copyWith(
-    color: Theme.of(context).colorScheme.onSurfaceVariant,
-    letterSpacing: 1.2,
-  );
-}
-
-/// Checkbox row that toggles a task between todo and done.
-class TaskCheckRow extends ConsumerWidget {
-  const TaskCheckRow({super.key, required this.task});
-
-  final Task task;
+class _NavChevron extends StatelessWidget {
+  const _NavChevron(
+      {required this.icon, required this.label, required this.onTap});
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bool done = task.status == TaskStatus.done;
-
-    return CheckboxListTile(
-      value: done,
-      dense: true,
-      controlAffinity: ListTileControlAffinity.leading,
-      onChanged: (bool? checked) {
-        ref.read(taskRepositoryProvider).update(
-              task.copyWith(
-                status:
-                    (checked ?? false) ? TaskStatus.done : TaskStatus.todo,
-                updatedAt: DateTime.now().toUtc(),
-              ),
-            );
-      },
-      title: Text(
-        task.title,
-        style: AppTypography.bodyLarge.copyWith(
-          decoration: done ? TextDecoration.lineThrough : null,
-          color:
-              done ? Theme.of(context).colorScheme.onSurfaceVariant : null,
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: LumaIcon(icon, size: 21, color: LumaColors.ink2),
+          ),
         ),
       ),
     );
   }
 }
 
+/// Eyebrow section label (11px uppercase, 0.08em).
+TextStyle plannerSectionLabel(BuildContext context) => lumaEyebrow();
+
+/// Hairline task row that toggles a task between todo and done.
+class TaskCheckRow extends ConsumerWidget {
+  const TaskCheckRow({super.key, required this.task, this.hairlineTop = true});
+
+  final Task task;
+  final bool hairlineTop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool done = task.status == TaskStatus.done;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 52),
+      decoration: BoxDecoration(
+        border: hairlineTop
+            ? const Border(top: BorderSide(color: LumaColors.hairline))
+            : null,
+      ),
+      child: Row(
+        children: <Widget>[
+          LumaCheckbox(
+            checked: done,
+            semanticLabel: 'Complete ${task.title}',
+            onTap: () => ref.read(taskRepositoryProvider).update(
+                  task.copyWith(
+                    status: done ? TaskStatus.todo : TaskStatus.done,
+                    updatedAt: DateTime.now().toUtc(),
+                  ),
+                ),
+          ),
+          const SizedBox(width: 2),
+          Expanded(
+            child: Text(
+              task.title,
+              style: done
+                  ? lumaSans(
+                          size: 15,
+                          weight: FontWeight.w500,
+                          color: LumaColors.ink3)
+                      .copyWith(
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: LumaColors.ink3)
+                  : lumaSans(size: 15, weight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Card with one (optionally multiline) text field and a save button —
-/// used for the day intention and month/year themes.
+/// used for the day intention and month/year themes. The field renders in
+/// the design's italic serif "intention" voice.
 class PlanTextFieldCard extends StatefulWidget {
   const PlanTextFieldCard({
     super.key,
@@ -128,33 +179,45 @@ class _PlanTextFieldCardState extends State<PlanTextFieldCard> {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          AppTextField(
-            label: widget.label,
-            hint: widget.hint,
-            controller: _controller,
-            maxLines: widget.maxLines,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        TextField(
+          controller: _controller,
+          maxLines: widget.maxLines,
+          style: lumaSerif(size: 21, height: 1.3, style: FontStyle.italic)
+              .copyWith(color: LumaColors.ink2),
+          cursorColor: LumaColors.ink,
+          decoration: InputDecoration(
+            isCollapsed: true,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+            hintText: '“${widget.hint}”',
+            hintStyle:
+                lumaSerif(size: 21, height: 1.3, style: FontStyle.italic)
+                    .copyWith(color: LumaColors.ink3),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: AppButton(
-              label: 'Save',
-              variant: AppButtonVariant.secondary,
-              onPressed: _saving
-                  ? null
-                  : () async {
-                      setState(() => _saving = true);
-                      await widget.onSave(_controller.text.trim());
-                      if (mounted) setState(() => _saving = false);
-                    },
-            ),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: LumaTextButton(
+            label: _saving ? 'Saving…' : 'Save',
+            height: 36,
+            fontSize: 14,
+            color: LumaColors.accent,
+            onTap: _saving
+                ? null
+                : () async {
+                    setState(() => _saving = true);
+                    await widget.onSave(_controller.text.trim());
+                    if (mounted) setState(() => _saving = false);
+                  },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

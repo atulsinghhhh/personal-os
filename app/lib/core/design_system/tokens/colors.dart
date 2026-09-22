@@ -1,45 +1,63 @@
 import 'package:flutter/material.dart';
 
-/// Brand seed and semantic color roles Material 3's [ColorScheme] doesn't
-/// cover (financial signal colors, life-area accents). [ColorScheme] itself
-/// is derived via `ColorScheme.fromSeed` in app_theme_light/dark.dart; the
-/// explicit overrides below exist because a seeded scheme alone can't
-/// guarantee brand-correct surface-container tones or the exact semantic
-/// hues a finance app needs (income/expense/warning/conflict).
+/// Luma palette from design/luma-design.html `<script id="luma-tokens">`.
+/// A warm paper ground, near-black ink, one indigo accent, and four
+/// semantic signal colors. [ColorScheme] is assembled from these in
+/// app_theme_light/dark.dart.
 abstract final class AppColors {
-  static const Color brandSeed = Color(0xFF2D5BFF);
+  static const Color brandSeed = Color(0xFF2F4F8F);
 
-  // Light scheme overrides
-  static const Color lightSurfaceContainer = Color(0xFFF2F3F7);
-  static const Color lightSurfaceContainerHigh = Color(0xFFE8EAF0);
-  static const Color lightBackground = Color(0xFFFAFAFC);
-  static const Color lightOutline = Color(0xFFC4C7CE);
+  // Light (color.light)
+  static const Color ground = Color(0xFFF5F3EE);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color sunken = Color(0xFFEAE7E0);
+  static const Color hairline = Color(0xFFE1DDD4);
+  static const Color ink = Color(0xFF1B1B19);
+  static const Color ink2 = Color(0xFF57544D);
+  static const Color ink3 = Color(0xFF6F6B62);
+  static const Color accent = Color(0xFF2F4F8F);
+  static const Color accentSoft = Color(0xFFE3E8F2);
 
-  // Dark scheme overrides
-  static const Color darkSurfaceContainer = Color(0xFF1D1F23);
-  static const Color darkSurfaceContainerHigh = Color(0xFF26282D);
-  static const Color darkBackground = Color(0xFF0F1012);
-  static const Color darkOutline = Color(0xFF8B8F99);
+  // Dark (color.dark)
+  static const Color darkGround = Color(0xFF121211);
+  static const Color darkSurface = Color(0xFF1C1C1A);
+  static const Color darkHairline = Color(0xFF2B2A27);
+  static const Color darkInk = Color(0xFFEEECE6);
+  static const Color darkInk2 = Color(0xFFA9A69D);
+  static const Color darkAccent = Color(0xFF94ABDD);
 
-  // Semantic signal colors (income/expense/warning/conflict), light + dark.
-  static const Color incomeLight = Color(0xFF1B8A5A);
-  static const Color incomeDark = Color(0xFF6FD79B);
-  static const Color expenseLight = Color(0xFFC4432B);
-  static const Color expenseDark = Color(0xFFFF8A6B);
-  static const Color warningLight = Color(0xFFB8860B);
-  static const Color warningDark = Color(0xFFF2C744);
-  static const Color conflictLight = Color(0xFFD32F2F);
-  static const Color conflictDark = Color(0xFFFF6B6B);
+  // Kept aliases used by existing screens.
+  static const Color lightSurfaceContainer = surface;
+  static const Color lightSurfaceContainerHigh = sunken;
+  static const Color lightBackground = ground;
+  static const Color lightOutline = hairline;
 
-  /// Assignable life-area accent swatches (8 presets), same in both themes.
+  static const Color darkSurfaceContainer = darkSurface;
+  static const Color darkSurfaceContainerHigh = Color(0xFF232321);
+  static const Color darkBackground = darkGround;
+  static const Color darkOutline = darkHairline;
+
+  // Semantic signal colors (color.semantic): income/positive,
+  // expense/negative, warning; conflict reuses negative.
+  static const Color incomeLight = Color(0xFF2E7250);
+  static const Color incomeDark = Color(0xFF6FB893);
+  static const Color expenseLight = Color(0xFFA33F2B);
+  static const Color expenseDark = Color(0xFFD98871);
+  static const Color warningLight = Color(0xFF8E6210);
+  static const Color warningDark = Color(0xFFC9A45C);
+  static const Color conflictLight = Color(0xFFA33F2B);
+  static const Color conflictDark = Color(0xFFD98871);
+
+  /// Assignable life-area accent swatches. Luma is monochrome + one accent,
+  /// so these stay in the same muted register as the core palette.
   static const List<Color> lifeAreaAccents = <Color>[
-    Color(0xFF2D5BFF),
-    Color(0xFF7C4DFF),
-    Color(0xFFFF6D9E),
-    Color(0xFFFF8A3D),
-    Color(0xFF2BB673),
-    Color(0xFF26C6DA),
-    Color(0xFF8D6E63),
-    Color(0xFF78909C),
+    Color(0xFF2F4F8F),
+    Color(0xFF2E7250),
+    Color(0xFF8E6210),
+    Color(0xFFA33F2B),
+    Color(0xFF57544D),
+    Color(0xFF4E6E58),
+    Color(0xFF6E5A8E),
+    Color(0xFF6F6B62),
   ];
 }

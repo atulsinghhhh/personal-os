@@ -3,23 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/design_system/theme/theme_extensions.dart';
-import '../../../../core/design_system/tokens/spacing.dart';
-import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_button.dart';
-import '../../../../core/design_system/widgets/app_card.dart';
-import '../../../../core/design_system/widgets/app_text_field.dart';
 import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../luma/theme/tokens.dart';
 import '../../../money/transactions/domain/entities/transaction_entities.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 import '../../domain/entities/review_entities.dart';
 import '../providers/review_providers.dart';
 import 'review_widgets.dart';
 
-/// The full daily review: that day's numbers for context, 1–5 ratings for
-/// energy/focus/mood, and three reflection prompts.
+/// Design 19 "Daily review": the day in serif numbers, a feeling chip row,
+/// and reflection prompts in the design's serif voice.
 class DailyReviewView extends ConsumerStatefulWidget {
   const DailyReviewView({super.key});
 
@@ -34,32 +29,28 @@ class _DailyReviewViewState extends ConsumerState<DailyReviewView> {
   Widget build(BuildContext context) {
     final AsyncValue<DailyReview?> review =
         ref.watch(dailyReviewForDateProvider(_date));
+    final DateTime now = DateTime.now();
+    final bool evening = now.hour >= 17;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.huge,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
       children: <Widget>[
         ReviewNavHeader(
-          label: DateFormat('EEE, MMM d yyyy').format(_date),
+          eyebrow:
+              '${evening ? 'Evening' : 'Daily'} review · ${DateFormat('HH:mm').format(now)}',
+          label: DateFormat('EEEE').format(_date),
+          sub: DateFormat('MMMM d, y').format(_date),
           onPrevious: () => setState(
             () => _date = _date.subtract(const Duration(days: 1)),
           ),
           onNext: () =>
               setState(() => _date = _date.add(const Duration(days: 1))),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Text('THE DAY IN NUMBERS', style: reviewSectionLabel(context)),
-        const SizedBox(height: AppSpacing.sm),
-        _DayContextCard(date: _date),
-        const SizedBox(height: AppSpacing.xl),
-        Text('REVIEW', style: reviewSectionLabel(context)),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 28),
+        _DayNumbers(date: _date),
+        const SizedBox(height: 28),
         review.when(
-          loading: () => const LoadingShimmer(height: 320),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (Object error, _) =>
               const ErrorStateView(message: 'Could not load the review.'),
           data: (DailyReview? existing) => _DailyReviewForm(
@@ -73,142 +64,98 @@ class _DailyReviewViewState extends ConsumerState<DailyReviewView> {
   }
 }
 
-class _DayContextCard extends ConsumerWidget {
-  const _DayContextCard({required this.date});
+/// The day in numbers: a 2-column serif stat grid between hairlines.
+class _DayNumbers extends ConsumerWidget {
+  const _DayNumbers({required this.date});
 
   final DateTime date;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Task>> tasks =
-        ref.watch(reviewTasksForDateProvider(date));
-    final AsyncValue<int> focusMinutes =
-        ref.watch(reviewFocusMinutesProvider(date));
-    final AsyncValue<List<MoneyTransaction>> transactions =
-        ref.watch(reviewTransactionsForDateProvider(date));
+    final List<Task> tasks =
+        ref.watch(reviewTasksForDateProvider(date)).value ?? const <Task>[];
+    final int minutes = ref.watch(reviewFocusMinutesProvider(date)).value ?? 0;
+    final List<MoneyTransaction> transactions =
+        ref.watch(reviewTransactionsForDateProvider(date)).value ??
+            const <MoneyTransaction>[];
 
-    if (tasks.isLoading || focusMinutes.isLoading || transactions.isLoading) {
-      return const LoadingShimmer(height: 100);
+    final int done =
+        tasks.where((Task task) => task.status == TaskStatus.done).length;
+
+    final List<MoneyTransaction> expenses = transactions
+        .where((MoneyTransaction t) => t.kind == TransactionKind.expense)
+        .toList(growable: false);
+    String spent = '—';
+    if (expenses.isNotEmpty) {
+      final String currency = expenses.first.amount.currency;
+      final double total = expenses
+          .where((MoneyTransaction t) => t.amount.currency == currency)
+          .fold(0, (double sum, MoneyTransaction t) => sum + t.amount.amount);
+      spent = NumberFormat.simpleCurrency(name: currency, decimalDigits: 0)
+          .format(total);
     }
-    if (tasks.hasError || focusMinutes.hasError || transactions.hasError) {
-      return const ErrorStateView(
-        message: "Could not load the day's numbers.",
-      );
-    }
 
-    final List<Task> allTasks = tasks.value ?? const <Task>[];
-    final int done = allTasks
-        .where((Task task) => task.status == TaskStatus.done)
-        .length;
-    final int minutes = focusMinutes.value ?? 0;
-
-    final Map<String, double> moneyIn = <String, double>{};
-    final Map<String, double> moneyOut = <String, double>{};
-    for (final MoneyTransaction transaction
-        in transactions.value ?? const <MoneyTransaction>[]) {
-      final String currency = transaction.amount.currency;
-      final double amount = transaction.amount.amount;
-      switch (transaction.kind) {
-        case TransactionKind.income:
-          moneyIn.update(
-            currency,
-            (double total) => total + amount,
-            ifAbsent: () => amount,
-          );
-        case TransactionKind.expense:
-          moneyOut.update(
-            currency,
-            (double total) => total + amount,
-            ifAbsent: () => amount,
-          );
-        case TransactionKind.transfer:
-          break;
-      }
-    }
-    final List<String> currencies =
-        <String>{...moneyIn.keys, ...moneyOut.keys}.toList()..sort();
-
-    return AppCard(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: LumaColors.hairline),
+          bottom: BorderSide(color: LumaColors.hairline),
+        ),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
               Expanded(
-                child: _ContextStat(
-                  label: 'Tasks done',
-                  value: '$done / ${allTasks.length}',
-                ),
-              ),
+                  child:
+                      _Stat(value: '$done', label: 'tasks completed')),
               Expanded(
-                child: _ContextStat(
-                  label: 'Focus',
+                child: _Stat(
                   value:
                       '${minutes ~/ 60}h ${(minutes % 60).toString().padLeft(2, '0')}m',
+                  label: 'focused',
                 ),
               ),
             ],
           ),
-          if (currencies.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            // Per-currency in/out — never summed across currencies.
-            for (final String currency in currencies)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        currency,
-                        style: AppTypography.labelLarge,
-                      ),
-                    ),
-                    Text(
-                      'In ${_format(currency, moneyIn[currency] ?? 0)}',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: context.semanticColors.income,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.lg),
-                    Text(
-                      'Out ${_format(currency, moneyOut[currency] ?? 0)}',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: context.semanticColors.expense,
-                      ),
-                    ),
-                  ],
+          const SizedBox(height: 16),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _Stat(
+                  value: spent,
+                  label: expenses.isEmpty
+                      ? 'spent'
+                      : 'spent · ${expenses.length} transaction${expenses.length == 1 ? '' : 's'}',
                 ),
               ),
-          ],
+              Expanded(
+                child: _Stat(
+                  value: '${tasks.length - done}',
+                  label: 'tasks left',
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
-
-  static String _format(String currency, double amount) {
-    return NumberFormat.simpleCurrency(name: currency).format(amount);
-  }
 }
 
-class _ContextStat extends StatelessWidget {
-  const _ContextStat({required this.label, required this.value});
-
-  final String label;
+class _Stat extends StatelessWidget {
+  const _Stat({required this.value, required this.label});
   final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          label,
-          style: AppTypography.labelSmall.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(value, style: AppTypography.currencyMedium),
+        Text(value, style: lumaSerif(size: 30)),
+        Text(label, style: lumaSans(size: 12.5, color: LumaColors.ink3)),
       ],
     );
   }
@@ -250,54 +197,62 @@ class _DailyReviewFormState extends ConsumerState<_DailyReviewForm> {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          RatingSelector(
-            label: 'Energy',
-            value: _energy,
-            onChanged: (int value) => setState(() => _energy = value),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        RatingSelector(
+          label: 'How did today feel?',
+          value: _mood,
+          onChanged: (int value) => setState(() => _mood = value),
+        ),
+        const SizedBox(height: 24),
+        RatingSelector(
+          label: 'Energy',
+          value: _energy,
+          onChanged: (int value) => setState(() => _energy = value),
+        ),
+        const SizedBox(height: 24),
+        RatingSelector(
+          label: 'Focus',
+          value: _focus,
+          onChanged: (int value) => setState(() => _focus = value),
+        ),
+        const SizedBox(height: 28),
+        ReviewPromptField(
+          label: 'What went well?',
+          controller: _accomplished,
+        ),
+        const SizedBox(height: 24),
+        ReviewPromptField(
+          label: 'What didn’t?',
+          controller: _blockedBy,
+        ),
+        const SizedBox(height: 24),
+        ReviewPromptField(
+          label: 'Tomorrow',
+          hint: 'One concrete adjustment…',
+          controller: _changeTomorrow,
+        ),
+        const SizedBox(height: 28),
+        GestureDetector(
+          onTap: _saving ? null : _save,
+          child: Container(
+            height: 54,
+            decoration: BoxDecoration(
+              color: LumaColors.ink,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              _saving ? 'Saving…' : 'Complete review',
+              style: lumaSans(
+                  size: 16,
+                  weight: FontWeight.w600,
+                  color: LumaColors.surface),
+            ),
           ),
-          RatingSelector(
-            label: 'Focus',
-            value: _focus,
-            onChanged: (int value) => setState(() => _focus = value),
-          ),
-          RatingSelector(
-            label: 'Mood',
-            value: _mood,
-            onChanged: (int value) => setState(() => _mood = value),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            label: 'What did you accomplish?',
-            hint: 'Wins, shipped work, progress…',
-            controller: _accomplished,
-            maxLines: 3,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            label: 'What blocked you?',
-            hint: 'Friction, interruptions, blockers…',
-            controller: _blockedBy,
-            maxLines: 3,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            label: 'What should change tomorrow?',
-            hint: 'One concrete adjustment…',
-            controller: _changeTomorrow,
-            maxLines: 3,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: 'Save review',
-            expand: true,
-            onPressed: _saving ? null : _save,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

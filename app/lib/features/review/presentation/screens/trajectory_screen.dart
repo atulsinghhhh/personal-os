@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/design_system/tokens/spacing.dart';
-import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_card.dart';
-import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/primitives.dart';
 import '../../../../shared/models/money.dart';
 import '../../../focus/domain/entities/focus_session.dart';
 import '../../../future/domain/entities/future_entities.dart';
@@ -114,6 +112,10 @@ final FutureProvider<TrajectoryData> trajectoryProvider =
   );
 });
 
+/// Design "Trajectory": hairline-separated progress rows per life area, a
+/// week-in-focus figure, this month's spend, and financial-goal pacing —
+/// every number states the arithmetic behind it, never a projection dressed
+/// up as certainty.
 class TrajectoryScreen extends ConsumerWidget {
   const TrajectoryScreen({super.key});
 
@@ -122,116 +124,92 @@ class TrajectoryScreen extends ConsumerWidget {
     final AsyncValue<TrajectoryData> data = ref.watch(trajectoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trajectory')),
+      backgroundColor: LumaColors.ground,
       body: data.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: LoadingShimmer(height: 200),
-        ),
-        error: (Object error, _) =>
-            ErrorStateView(message: 'Could not compute your trajectory.'),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (Object error, _) => Center(
+            child: Text('Could not compute your trajectory.',
+                style: lumaSans(size: 14, color: LumaColors.ink3))),
         data: (TrajectoryData t) {
           if (t.lifeAreas.isEmpty) {
-            return const EmptyStateView(
-              message:
-                  'Create life areas and goals to see your trajectory.',
-              icon: Icons.insights_outlined,
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text('Create life areas and goals to see your trajectory.',
+                    textAlign: TextAlign.center,
+                    style: lumaSans(size: 14, color: LumaColors.ink3)),
+              ),
             );
           }
           return ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 110),
             children: <Widget>[
-              Text('GOAL PROGRESS BY LIFE AREA', style: _label(context)),
-              const SizedBox(height: AppSpacing.sm),
-              AppCard(
-                child: Column(
-                  children: <Widget>[
-                    for (final LifeArea area in t.lifeAreas)
-                      _AreaProgressRow(
-                        area: area,
-                        goals: t.goalsByArea[area.id] ?? const <Goal>[],
-                        focusMinutes: t.focusMinutesByArea[area.id] ?? 0,
-                      ),
-                  ],
+              Text('Trajectory', style: lumaSerif(size: 40, height: 1.05)),
+              const SizedBox(height: 28),
+              const LumaEyebrow('Goal progress by life area'),
+              const SizedBox(height: 4),
+              for (final LifeArea area in t.lifeAreas)
+                _AreaProgressRow(
+                  area: area,
+                  goals: t.goalsByArea[area.id] ?? const <Goal>[],
+                  focusMinutes: t.focusMinutesByArea[area.id] ?? 0,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: 8),
               Text(
-                'Bars: goals marked achieved ÷ all goals in the area. Time '
-                'chips: all-time focus minutes on that area\'s goals.',
-                style: _caption(context),
+                'Bars: goals marked achieved ÷ all goals in the area. Time chips: '
+                "all-time focus minutes on that area's goals.",
+                style: lumaSans(size: 12.5, color: LumaColors.ink3),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              Text('LAST 7 DAYS', style: _label(context)),
-              const SizedBox(height: AppSpacing.sm),
-              AppCard(
-                child: Column(
+              const SizedBox(height: 28),
+              const LumaEyebrow('Last 7 days'),
+              const SizedBox(height: 12),
+              Text(
+                '${t.weekFocusMinutes ~/ 60}h '
+                '${(t.weekFocusMinutes % 60).toString().padLeft(2, '0')}m of recorded focus time',
+                style: lumaSerif(size: 25),
+              ),
+              const SizedBox(height: 4),
+              Text('Sum of completed focus sessions in the last 7 days.',
+                  style: lumaSans(size: 12.5, color: LumaColors.ink3)),
+              const SizedBox(height: 28),
+              const LumaEyebrow("This month's spending"),
+              const SizedBox(height: 12),
+              if (t.monthExpensesByCurrency.isEmpty)
+                Text('No expenses recorded this month.',
+                    style: lumaSans(size: 14, color: LumaColors.ink3))
+              else
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      '${t.weekFocusMinutes ~/ 60}h '
-                      '${(t.weekFocusMinutes % 60).toString().padLeft(2, '0')}m '
-                      'of recorded focus time',
-                      style: AppTypography.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Sum of completed focus sessions in the last 7 days.',
-                      style: _caption(context),
-                    ),
+                    for (final MapEntry<String, double> entry
+                        in t.monthExpensesByCurrency.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          NumberFormat.simpleCurrency(name: entry.key).format(entry.value),
+                          style: lumaSans(size: 17, weight: FontWeight.w500),
+                        ),
+                      ),
                   ],
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Text('THIS MONTH\'S SPENDING', style: _label(context)),
-              const SizedBox(height: AppSpacing.sm),
-              AppCard(
-                child: t.monthExpensesByCurrency.isEmpty
-                    ? const Text('No expenses recorded this month.')
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          for (final MapEntry<String, double> entry
-                              in t.monthExpensesByCurrency.entries)
-                            Text(
-                              NumberFormat.simpleCurrency(name: entry.key)
-                                  .format(entry.value),
-                              style: AppTypography.currencyMedium,
-                            ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Text('FINANCIAL GOAL PACING', style: _label(context)),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: 28),
+              const LumaEyebrow('Financial goal pacing'),
+              const SizedBox(height: 4),
               if (t.financialGoals.isEmpty)
-                const AppCard(
-                  child: Text('No financial goals with targets yet.'),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text('No financial goals with targets yet.',
+                      style: lumaSans(size: 14, color: LumaColors.ink3)),
                 )
               else
                 for (final FinancialGoal goal in t.financialGoals)
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: _FinancialGoalPacing(goal: goal),
-                  ),
+                  _FinancialGoalPacing(goal: goal),
             ],
           );
         },
       ),
     );
   }
-
-  static TextStyle _label(BuildContext context) =>
-      AppTypography.labelMedium.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-        letterSpacing: 1.2,
-      );
-
-  static TextStyle _caption(BuildContext context) =>
-      AppTypography.labelSmall.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      );
 }
 
 class _AreaProgressRow extends StatelessWidget {
@@ -251,29 +229,30 @@ class _AreaProgressRow extends StatelessWidget {
         goals.where((Goal g) => g.status == GoalStatus.achieved).length;
     final double fraction = goals.isEmpty ? 0 : achieved / goals.length;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: LumaColors.hairline)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
               Expanded(
-                child: Text(area.name, style: AppTypography.titleMedium),
-              ),
+                  child: Text(area.name,
+                      style: lumaSans(size: 15, weight: FontWeight.w500))),
               Text(
                 goals.isEmpty
                     ? 'no goals'
                     : '$achieved/${goals.length}'
                         '${focusMinutes > 0 ? ' · ${focusMinutes ~/ 60}h' : ''}',
-                style: AppTypography.labelMedium.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                style: lumaSans(size: 12.5, color: LumaColors.ink3),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          LinearProgressIndicator(value: fraction),
+          const SizedBox(height: 8),
+          LumaProgressLine(value: fraction, height: 5),
         ],
       ),
     );
@@ -294,7 +273,8 @@ class _FinancialGoalPacing extends StatelessWidget {
     if (target == null) {
       pacing = 'No target amount set.';
     } else if (deadline == null) {
-      pacing = 'Target ${NumberFormat.simpleCurrency(name: target.currency).format(target.amount)}, no deadline set.';
+      pacing =
+          'Target ${NumberFormat.simpleCurrency(name: target.currency).format(target.amount)}, no deadline set.';
     } else {
       final DateTime now = DateTime.now();
       final int monthsRemaining =
@@ -306,20 +286,22 @@ class _FinancialGoalPacing extends StatelessWidget {
           '/month until ${DateFormat.yMMM().format(deadline)}.';
     }
 
-    return AppCard(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: LumaColors.hairline)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(goal.name, style: AppTypography.titleMedium),
-          const SizedBox(height: AppSpacing.xs),
-          Text(pacing, style: AppTypography.bodyMedium),
-          const SizedBox(height: AppSpacing.xs),
+          Text(goal.name, style: lumaSans(size: 15, weight: FontWeight.w500)),
+          const SizedBox(height: 6),
+          Text(pacing, style: lumaSans(size: 13.5, color: LumaColors.ink2)),
+          const SizedBox(height: 4),
           Text(
             'Projection: target ÷ months remaining, assuming equal monthly '
             'contributions from zero. Edit the goal to change the inputs.',
-            style: AppTypography.labelSmall.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: lumaSans(size: 12, color: LumaColors.ink3),
           ),
         ],
       ),

@@ -4,127 +4,69 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/design_system/tokens/spacing.dart';
-import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_button.dart';
-import '../../../../core/design_system/widgets/app_card.dart';
-import '../../../../core/design_system/widgets/app_sheet.dart';
-import '../../../../core/design_system/widgets/app_text_field.dart';
-import '../../../../core/design_system/widgets/currency_input.dart';
-import '../../../../core/design_system/widgets/date_selector.dart';
-import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/buttons.dart';
+import '../../../../luma/widgets/luma_icons.dart';
+import '../../../../luma/widgets/primitives.dart';
 import '../../../../shared/models/money.dart';
 import '../../../goals/domain/entities/goal_entities.dart';
 import '../../financial_goals/domain/entities/financial_goal.dart';
 import '../providers/money_providers.dart';
 import '../widgets/money_ui.dart';
 
-/// Financial goals: money targets, optionally linked to a life Goal. No
-/// progress numbers are fabricated — only the recorded target and link show.
+/// Design "FinancialGoal": one hairline-separated row per goal — serif
+/// title, target amount, target date, and an optional link to the life goal
+/// it serves. Nothing here is fabricated: only the recorded target shows.
 class FinancialGoalsScreen extends ConsumerWidget {
   const FinancialGoalsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<FinancialGoal>> goals =
-        ref.watch(moneyFinancialGoalsProvider);
-    final List<Goal> lifeGoals =
-        ref.watch(moneyLifeGoalsProvider).value ?? <Goal>[];
+    final AsyncValue<List<FinancialGoal>> goals = ref.watch(moneyFinancialGoalsProvider);
+    final List<Goal> lifeGoals = ref.watch(moneyLifeGoalsProvider).value ?? <Goal>[];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Financial goals')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateSheet(context, ref, lifeGoals),
-        icon: const Icon(Icons.add),
-        label: const Text('Goal'),
-      ),
-      body: goals.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Column(
+      backgroundColor: LumaColors.ground,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 52, 20, 110),
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              LoadingShimmer(height: 100),
-              SizedBox(height: AppSpacing.md),
-              LoadingShimmer(height: 100),
+              Text('Financial goals', style: lumaSerif(size: 34, height: 1.05)),
+              GestureDetector(
+                onTap: () => _showCreateSheet(context, ref, lifeGoals),
+                child: Text('New',
+                    style: lumaSans(
+                        size: 14, weight: FontWeight.w500, color: LumaColors.accent)),
+              ),
             ],
           ),
-        ),
-        error: (Object error, _) =>
-            ErrorStateView(message: 'Could not load financial goals.'),
-        data: (List<FinancialGoal> all) {
-          if (all.isEmpty) {
-            return EmptyStateView(
-              message:
-                  'No financial goals yet — give your money a direction.',
-              icon: Icons.flag_outlined,
-              ctaLabel: 'Create a financial goal',
-              onCta: () => _showCreateSheet(context, ref, lifeGoals),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: all.length,
-            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-            itemBuilder: (BuildContext context, int index) {
-              final FinancialGoal goal = all[index];
-              final Goal? linked = _linkedGoal(goal, lifeGoals);
-              return AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(goal.name, style: AppTypography.titleMedium),
-                    const SizedBox(height: AppSpacing.xs),
-                    if (goal.targetAmount != null)
-                      Text(
-                        'Target: ${formatMoney(goal.targetAmount!)}',
-                        style: AppTypography.currencyMedium,
-                      ),
-                    if (goal.targetDate != null) ...<Widget>[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'By ${DateFormat.yMMMd().format(goal.targetDate!.toLocal())}',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    if (linked != null) ...<Widget>[
-                      const SizedBox(height: AppSpacing.sm),
-                      InkWell(
-                        onTap: () =>
-                            context.go('/future/goal/${linked.id}'),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(
-                              Icons.link,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Flexible(
-                              child: Text(
-                                linked.title,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.labelMedium.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+          const SizedBox(height: 28),
+          goals.when(
+            loading: () => const SizedBox(height: 200),
+            error: (Object error, _) => Text('Could not load financial goals.',
+                style: lumaSans(size: 14, color: LumaColors.ink3)),
+            data: (List<FinancialGoal> all) {
+              if (all.isEmpty) {
+                return GestureDetector(
+                  onTap: () => _showCreateSheet(context, ref, lifeGoals),
+                  child: Text('No financial goals yet — give your money a direction.',
+                      style: lumaSans(
+                          size: 14, weight: FontWeight.w500, color: LumaColors.accent)),
+                );
+              }
+              return Column(
+                children: <Widget>[
+                  for (final FinancialGoal goal in all)
+                    _FinancialGoalRow(goal: goal, linked: _linkedGoal(goal, lifeGoals)),
+                ],
               );
             },
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -145,106 +87,206 @@ class FinancialGoalsScreen extends ConsumerWidget {
     final TextEditingController target = TextEditingController();
     DateTime? targetDate;
     Goal? linkedGoal;
-    final String currency =
-        ref.read(currentProfileProvider).value?.defaultCurrency ?? 'USD';
+    final String currency = ref.read(currentProfileProvider).value?.defaultCurrency ?? 'USD';
 
-    return showAppBottomSheet<void>(
+    return showModalBottomSheet<void>(
       context: context,
-      title: 'New financial goal',
+      isScrollControlled: true,
+      backgroundColor: LumaColors.ground,
+      barrierColor: const Color(0x521B1B19),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (BuildContext sheetContext) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                AppTextField(
-                  controller: name,
-                  label: 'Name',
-                  hint: 'e.g. Pay off the car loan',
-                  autofocus: true,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Target amount ($currency)',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                CurrencyInput(
-                  currencyCode: currency,
-                  controller: target,
-                  autofocus: false,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DateSelector(
-                  label: 'Target date (optional)',
-                  value: targetDate,
-                  onChanged: (DateTime picked) =>
-                      setState(() => targetDate = picked),
-                ),
-                if (lifeGoals.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Linked life goal (optional)',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  DropdownButtonFormField<Goal?>(
-                    initialValue: linkedGoal,
-                    items: <DropdownMenuItem<Goal?>>[
-                      const DropdownMenuItem<Goal?>(
-                        child: Text('None'),
-                      ),
-                      for (final Goal goal in lifeGoals)
-                        DropdownMenuItem<Goal?>(
-                          value: goal,
-                          child: Text(
-                            goal.title,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 34),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Center(
+                      child: Container(
+                        width: 38,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: LumaColors.hairline,
+                          borderRadius: BorderRadius.circular(3),
                         ),
-                    ],
-                    onChanged: (Goal? value) =>
-                        setState(() => linkedGoal = value),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                AppButton(
-                  label: 'Create goal',
-                  expand: true,
-                  onPressed: () async {
-                    final String value = name.text.trim();
-                    final double? amount = double.tryParse(target.text);
-                    final String? userId = ref
-                        .read(supabaseClientProvider)
-                        .auth
-                        .currentUser
-                        ?.id;
-                    if (value.isEmpty || userId == null) return;
-                    final DateTime now = DateTime.now().toUtc();
-                    await ref.read(financialGoalRepositoryProvider).create(
-                          FinancialGoal(
-                            id: const Uuid().v4(),
-                            userId: userId,
-                            name: value,
-                            goalType: FinancialGoalType.custom,
-                            targetAmount: amount == null || amount <= 0
-                                ? null
-                                : Money(amount: amount, currency: currency),
-                            targetDate: targetDate,
-                            linkedGoalId: linkedGoal?.id,
-                            createdAt: now,
-                            updatedAt: now,
-                          ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const LumaEyebrow('New financial goal'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: name,
+                      autofocus: true,
+                      style: lumaSerif(size: 26, height: 1.15),
+                      cursorColor: LumaColors.ink,
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        hintText: 'e.g. Pay off the car loan',
+                        hintStyle: lumaSerif(size: 26, height: 1.15, color: LumaColors.ink3),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: target,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: lumaSans(size: 17, weight: FontWeight.w500),
+                      cursorColor: LumaColors.ink,
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        hintText: 'Target amount ($currency)',
+                        hintStyle: lumaSans(size: 17, color: LumaColors.ink3),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () async {
+                        final DateTime now = DateTime.now();
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: targetDate ?? now,
+                          firstDate: DateTime(now.year - 1),
+                          lastDate: DateTime(now.year + 30),
                         );
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
+                        if (picked != null) setState(() => targetDate = picked);
+                      },
+                      child: Row(
+                        children: <Widget>[
+                          const LumaIcon(LumaIcons.chevronRight,
+                              size: 16, color: LumaColors.ink3),
+                          const SizedBox(width: 6),
+                          Text(
+                            targetDate == null
+                                ? 'Target date (optional)'
+                                : DateFormat.yMMMd().format(targetDate!),
+                            style: lumaSans(size: 14, color: LumaColors.ink2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (lifeGoals.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 16),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        child: Row(
+                          children: <Widget>[
+                            LumaChip(
+                              label: 'No link',
+                              selected: linkedGoal == null,
+                              onTap: () => setState(() => linkedGoal = null),
+                            ),
+                            for (final Goal goal in lifeGoals) ...<Widget>[
+                              const SizedBox(width: 8),
+                              LumaChip(
+                                label: goal.title,
+                                selected: linkedGoal?.id == goal.id,
+                                onTap: () => setState(() => linkedGoal = goal),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    LumaPrimaryButton(
+                      label: 'Create goal',
+                      height: 52,
+                      onTap: () async {
+                        final String value = name.text.trim();
+                        final double? amount = double.tryParse(target.text);
+                        final String? userId =
+                            ref.read(supabaseClientProvider).auth.currentUser?.id;
+                        if (value.isEmpty || userId == null) return;
+                        final DateTime now = DateTime.now().toUtc();
+                        await ref.read(financialGoalRepositoryProvider).create(
+                              FinancialGoal(
+                                id: const Uuid().v4(),
+                                userId: userId,
+                                name: value,
+                                goalType: FinancialGoalType.custom,
+                                targetAmount: amount == null || amount <= 0
+                                    ? null
+                                    : Money(amount: amount, currency: currency),
+                                targetDate: targetDate,
+                                linkedGoalId: linkedGoal?.id,
+                                createdAt: now,
+                                updatedAt: now,
+                              ),
+                            );
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         );
       },
+    );
+  }
+}
+
+class _FinancialGoalRow extends StatelessWidget {
+  const _FinancialGoalRow({required this.goal, required this.linked});
+
+  final FinancialGoal goal;
+  final Goal? linked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: LumaColors.hairline)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(goal.name, style: lumaSerif(size: 22)),
+          const SizedBox(height: 8),
+          if (goal.targetAmount != null)
+            Text(formatMoney(goal.targetAmount!),
+                style: lumaSans(size: 15, weight: FontWeight.w500)),
+          if (goal.targetDate != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text('By ${DateFormat.yMMMd().format(goal.targetDate!.toLocal())}',
+                style: lumaSans(size: 12.5, color: LumaColors.ink3)),
+          ],
+          if (linked != null) ...<Widget>[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => context.go('/future/goal/${linked!.id}'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const LumaIcon(LumaIcons.link, size: 14, color: LumaColors.accent),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(linked!.title,
+                        overflow: TextOverflow.ellipsis,
+                        style: lumaSans(
+                            size: 13, weight: FontWeight.w500, color: LumaColors.accent)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -10,6 +10,8 @@ import '../../../../core/design_system/widgets/app_list_row.dart';
 import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/primitives.dart';
 import '../../../goals/domain/entities/goal_entities.dart';
 import '../../domain/entities/plan_entities.dart';
 import '../providers/plan_providers.dart';
@@ -47,6 +49,8 @@ class _YearPlannerViewState extends ConsumerState<YearPlannerView> {
           onNext: () => setState(() => _year += 1),
         ),
         const SizedBox(height: AppSpacing.md),
+        _YearProgress(year: _year),
+        const SizedBox(height: AppSpacing.xl),
         Text('THEME', style: plannerSectionLabel(context)),
         const SizedBox(height: AppSpacing.sm),
         plan.when(
@@ -88,6 +92,45 @@ class _YearPlannerViewState extends ConsumerState<YearPlannerView> {
             updatedAt: now,
           ),
         );
+  }
+}
+
+/// "Day 264 of 365 · 101 days left" line with the ink year progress bar
+/// (design 15).
+class _YearProgress extends StatelessWidget {
+  const _YearProgress({required this.year});
+
+  final int year;
+
+  @override
+  Widget build(BuildContext context) {
+    final DateTime now = DateTime.now();
+    final int daysInYear =
+        DateTime(year + 1, 1, 1).difference(DateTime(year, 1, 1)).inDays;
+    final int dayOfYear = year == now.year
+        ? now.difference(DateTime(year, 1, 1)).inDays + 1
+        : (year < now.year ? daysInYear : 0);
+    final int daysLeft = daysInYear - dayOfYear;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text('Day $dayOfYear of $daysInYear',
+                style: lumaSans(size: 13, color: LumaColors.ink2)),
+            Text('$daysLeft days left',
+                style: lumaSans(size: 13, color: LumaColors.ink2)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        LumaProgressLine(
+          value: dayOfYear / daysInYear,
+          color: LumaColors.ink,
+        ),
+      ],
+    );
   }
 }
 

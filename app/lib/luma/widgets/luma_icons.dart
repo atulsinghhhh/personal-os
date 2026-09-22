@@ -23,6 +23,14 @@ abstract final class LumaIcons {
   static const String link =
       '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>';
   static const String plus = '<path d="M12 5v14M5 12h14"/>';
+  static const String close = '<path d="M6 6l12 12M18 6 6 18"/>';
+  static const String ellipsis =
+      '<circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/>';
+  static const String flag = '<path d="M6 21V4M6 4h11l-2 4 2 4H6"/>';
+  static const String moon =
+      '<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>';
+  static const String pause = '<path d="M9 6v12M15 6v12"/>';
+  static const String check = '<path d="m5 12.5 4.5 4.5L19 7.5"/>';
   static const String tabToday =
       '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>';
   static const String tabPlan =

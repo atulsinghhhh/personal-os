@@ -3,21 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/design_system/tokens/spacing.dart';
-import '../../../../core/design_system/tokens/typography.dart';
-import '../../../../core/design_system/widgets/app_card.dart';
 import '../../../../core/design_system/widgets/state_widgets.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
-import '../../../goals/domain/entities/goal_entities.dart';
+import '../../../../luma/theme/tokens.dart';
+import '../../../../luma/widgets/primitives.dart';
 import '../../../money/transactions/domain/entities/transaction_entities.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 import '../../domain/entities/review_entities.dart';
 import '../providers/review_providers.dart';
 import 'review_widgets.dart';
 
-/// Weekly review stub (Phase 1): six free-text prompts persisted per
-/// Monday-normalized week.
+/// Design 20 "Weekly review": serif execution stats with a per-day focus
+/// bar chart, the week's money, and reflection prompts.
 class WeeklyReviewView extends ConsumerStatefulWidget {
   const WeeklyReviewView({super.key});
 
@@ -35,16 +33,13 @@ class _WeeklyReviewViewState extends ConsumerState<WeeklyReviewView> {
     final DateTime weekEnd = _weekStart.add(const Duration(days: 6));
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.huge,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
       children: <Widget>[
         ReviewNavHeader(
-          label:
-              '${DateFormat('MMM d').format(_weekStart)} – ${DateFormat('MMM d, yyyy').format(weekEnd)}',
+          eyebrow: 'Review',
+          label: 'Your week',
+          sub:
+              '${DateFormat('MMMM d').format(_weekStart)} – ${DateFormat('d').format(weekEnd)}',
           onPrevious: () => setState(
             () => _weekStart = _weekStart.subtract(const Duration(days: 7)),
           ),
@@ -52,15 +47,19 @@ class _WeeklyReviewViewState extends ConsumerState<WeeklyReviewView> {
             () => _weekStart = _weekStart.add(const Duration(days: 7)),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Text('THE WEEK IN NUMBERS', style: reviewSectionLabel(context)),
-        const SizedBox(height: AppSpacing.sm),
-        _WeekContextCard(weekStart: _weekStart),
-        const SizedBox(height: AppSpacing.xl),
-        Text('WEEKLY REVIEW', style: reviewSectionLabel(context)),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 28),
+        const LumaEyebrow('Execution'),
+        const SizedBox(height: 14),
+        _ExecutionSection(weekStart: _weekStart),
+        const SizedBox(height: 28),
+        const LumaEyebrow('Money this week'),
+        const SizedBox(height: 4),
+        _WeekMoney(weekStart: _weekStart),
+        const SizedBox(height: 28),
+        const LumaEyebrow('Reflection'),
+        const SizedBox(height: 20),
         review.when(
-          loading: () => const LoadingShimmer(height: 320),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (Object error, _) =>
               const ErrorStateView(message: 'Could not load the review.'),
           data: (WeeklyReview? existing) => ReviewStubForm(
@@ -68,13 +67,13 @@ class _WeeklyReviewViewState extends ConsumerState<WeeklyReviewView> {
             fields: <ReviewFieldSpec>[
               ReviewFieldSpec(
                 id: 'wentWell',
-                label: 'What went well?',
+                label: 'What moved you forward?',
                 hint: 'Wins worth repeating…',
                 initialValue: existing?.wentWell,
               ),
               ReviewFieldSpec(
                 id: 'wentPoorly',
-                label: 'What went poorly?',
+                label: 'What wasted time?',
                 hint: 'Where the week leaked…',
                 initialValue: existing?.wentPoorly,
               ),
@@ -98,13 +97,12 @@ class _WeeklyReviewViewState extends ConsumerState<WeeklyReviewView> {
               ),
               ReviewFieldSpec(
                 id: 'nextWeekFocus',
-                label: 'Next week focus',
+                label: 'What should change next week?',
                 hint: 'The one thing that matters…',
                 initialValue: existing?.nextWeekFocus,
               ),
             ],
-            onSave: (Map<String, String?> values) =>
-                _save(existing, values),
+            onSave: (Map<String, String?> values) => _save(existing, values),
           ),
         ),
       ],
@@ -137,8 +135,9 @@ class _WeeklyReviewViewState extends ConsumerState<WeeklyReviewView> {
   }
 }
 
-class _WeekContextCard extends ConsumerWidget {
-  const _WeekContextCard({required this.weekStart});
+/// Serif stat pair + per-day focus bars (design 20's execution block).
+class _ExecutionSection extends ConsumerWidget {
+  const _ExecutionSection({required this.weekStart});
 
   final DateTime weekStart;
 
@@ -150,7 +149,9 @@ class _WeekContextCard extends ConsumerWidget {
         ref.watch(reviewAllTasksProvider).value ?? <Task>[];
     final List<Task> scheduledThisWeek = allTasks.where((Task t) {
       final DateTime? d = t.scheduledDate;
-      return d != null && !d.isBefore(weekStart) && d.isBefore(weekEndExclusive);
+      return d != null &&
+          !d.isBefore(weekStart) &&
+          d.isBefore(weekEndExclusive);
     }).toList(growable: false);
     final int completed = scheduledThisWeek
         .where((Task t) => t.status == TaskStatus.done)
@@ -161,6 +162,123 @@ class _WeekContextCard extends ConsumerWidget {
             .value ??
         0;
 
+    final List<int> byDay = <int>[
+      for (int i = 0; i < 7; i++)
+        ref
+                .watch(reviewFocusMinutesForRangeProvider(
+                    (weekStart.add(Duration(days: i)), 1)))
+                .value ??
+            0,
+    ];
+    final int maxDay =
+        byDay.fold(0, (int max, int v) => v > max ? v : max);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _BigStat(
+                value: '$completed',
+                label: 'tasks completed',
+              ),
+            ),
+            Expanded(
+              child: _BigStat(
+                value:
+                    '${focusMinutes ~/ 60}h ${(focusMinutes % 60).toString().padLeft(2, '0')}m',
+                label: 'focused',
+              ),
+            ),
+          ],
+        ),
+        if (maxDay > 0) ...<Widget>[
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 130,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                for (int i = 0; i < 7; i++) ...<Widget>[
+                  if (i > 0) const Spacer(),
+                  _DayBar(
+                    minutes: byDay[i],
+                    maxMinutes: maxDay,
+                    label: 'MTWTFSS'[i],
+                    weekend: i >= 5,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _BigStat extends StatelessWidget {
+  const _BigStat({required this.value, required this.label});
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(value, style: lumaSerif(size: 40, height: 1)),
+        const SizedBox(height: 4),
+        Text(label, style: lumaSans(size: 12.5, color: LumaColors.ink3)),
+      ],
+    );
+  }
+}
+
+class _DayBar extends StatelessWidget {
+  const _DayBar({
+    required this.minutes,
+    required this.maxMinutes,
+    required this.label,
+    required this.weekend,
+  });
+
+  final int minutes;
+  final int maxMinutes;
+  final String label;
+  final bool weekend;
+
+  @override
+  Widget build(BuildContext context) {
+    final double height =
+        maxMinutes == 0 ? 0 : 96 * minutes / maxMinutes;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Container(
+          width: 26,
+          height: height < 4 && minutes > 0 ? 4 : height,
+          decoration: BoxDecoration(
+            color: weekend ? const Color(0xFFB9C4DB) : LumaColors.accent,
+            borderRadius: BorderRadius.circular(5),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: lumaSans(size: 11, color: LumaColors.ink3)),
+      ],
+    );
+  }
+}
+
+/// Hairline money rows (in/out per currency).
+class _WeekMoney extends ConsumerWidget {
+  const _WeekMoney({required this.weekStart});
+
+  final DateTime weekStart;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final List<MoneyTransaction> transactions = ref
             .watch(reviewTransactionsForRangeProvider((weekStart, 7)))
             .value ??
@@ -180,74 +298,64 @@ class _WeekContextCard extends ConsumerWidget {
       );
     }
 
-    final List<Goal> allGoals =
-        ref.watch(reviewAllGoalsProvider).value ?? <Goal>[];
-    final int achieved = allGoals.where((Goal g) {
-      return g.status == GoalStatus.achieved &&
-          !g.updatedAt.isBefore(weekStart) &&
-          g.updatedAt.isBefore(weekEndExclusive);
-    }).length;
+    if (incomeByCurrency.isEmpty && expenseByCurrency.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text('No transactions this week.',
+            style: lumaSans(size: 13, color: LumaColors.ink3)),
+      );
+    }
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _StatLine(
-            label: 'Tasks',
-            value: '$completed / ${scheduledThisWeek.length} completed',
+    return Column(
+      children: <Widget>[
+        for (final MapEntry<String, double> entry
+            in expenseByCurrency.entries)
+          _MoneyLine(
+            label: 'Spent (${entry.key})',
+            value: _fmt(entry.value, entry.key),
           ),
-          _StatLine(
-            label: 'Focus time',
-            value:
-                '${focusMinutes ~/ 60}h ${(focusMinutes % 60).toString().padLeft(2, '0')}m',
+        for (final MapEntry<String, double> entry
+            in incomeByCurrency.entries)
+          _MoneyLine(
+            label: 'Income (${entry.key})',
+            value: _fmt(entry.value, entry.key),
+            valueColor: LumaColors.positive,
           ),
-          for (final MapEntry<String, double> entry
-              in incomeByCurrency.entries)
-            _StatLine(
-              label: 'Income (${entry.key})',
-              value: _fmt(entry.value, entry.key),
-            ),
-          for (final MapEntry<String, double> entry
-              in expenseByCurrency.entries)
-            _StatLine(
-              label: 'Expenses (${entry.key})',
-              value: _fmt(entry.value, entry.key),
-            ),
-          if (achieved > 0)
-            _StatLine(
-              label: 'Goals marked achieved this week',
-              value: '$achieved',
-            ),
-        ],
-      ),
+      ],
     );
   }
 
   static String _fmt(double amount, String currency) {
-    return NumberFormat.simpleCurrency(name: currency).format(amount);
+    return NumberFormat.simpleCurrency(name: currency, decimalDigits: 0)
+        .format(amount);
   }
 }
 
-class _StatLine extends StatelessWidget {
-  const _StatLine({required this.label, required this.value});
+class _MoneyLine extends StatelessWidget {
+  const _MoneyLine({
+    required this.label,
+    required this.value,
+    this.valueColor = LumaColors.ink,
+  });
 
   final String label;
   final String value;
+  final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 46),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: LumaColors.hairline)),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(
-            label,
-            style: AppTypography.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          Text(value, style: AppTypography.labelLarge),
+          Text(label, style: lumaSans(size: 14, color: LumaColors.ink3)),
+          const Spacer(),
+          Text(value,
+              style: lumaSans(
+                  size: 14, weight: FontWeight.w500, color: valueColor)),
         ],
       ),
     );

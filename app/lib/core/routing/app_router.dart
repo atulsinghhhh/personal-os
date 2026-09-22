@@ -18,6 +18,7 @@ import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/today/presentation/screens/today_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/auth/presentation/screens/sign_up_screen.dart';
+import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../providers/core_providers.dart';
 import 'app_shell.dart';
 import 'go_router_refresh_stream.dart';
@@ -42,10 +43,12 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           ref.read(supabaseClientProvider).auth.currentSession != null;
       final String location = state.matchedLocation;
       final bool goingToAuth =
-          location == RoutePaths.signIn || location == RoutePaths.signUp;
+          location == RoutePaths.signIn ||
+          location == RoutePaths.signUp ||
+          location == RoutePaths.welcome;
 
       if (!signedIn) {
-        return goingToAuth ? null : RoutePaths.signIn;
+        return goingToAuth ? null : RoutePaths.welcome;
       }
       if (goingToAuth) {
         // Splash owns the onboarding-completed check and routes onward.
@@ -57,6 +60,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: RoutePaths.splash,
         builder: (_, _) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.welcome,
+        builder: (_, _) => const WelcomeScreen(),
       ),
       GoRoute(
         path: RoutePaths.signIn,

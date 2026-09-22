@@ -70,8 +70,26 @@ dev_dependencies:
   freezed: ^4.0.2
   json_serializable: ^6.14.1
   mocktail: ^1.0.5
+  flutter_launcher_icons: ^0.14.4
   integration_test:
     sdk: flutter
+
+# Luma app icon (generated masters live in assets/icon/, drawn from the
+# design's Brand section). Regenerate platform icons with:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#1B1B19"
+  adaptive_icon_foreground: "assets/icon/app_icon_fg.png"
+  remove_alpha_ios: true
+  background_color_ios: "#1B1B19"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#1B1B19"
+    theme_color: "#1B1B19"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -1,86 +1,66 @@
 import 'package:flutter/material.dart';
 
-/// Type scale (Material 3 roles + two custom currency roles). Values are
-/// color-agnostic; color is applied by the active [ThemeData]/[ColorScheme].
+/// Luma type scale. Instrument Serif 400 for titles and big numbers,
+/// Geist for everything else, tabular numerals throughout
+/// (the design sets `font-variant-numeric: tabular-nums` on every screen).
 abstract final class AppTypography {
-  // No custom font family is bundled in Phase 1 — ThemeData uses the
-  // platform default (Roboto/San Francisco) so every style below renders
-  // consistently without shipping font assets.
+  static const String serifFamily = 'Instrument Serif';
+  static const String sansFamily = 'Geist';
 
-  static const TextStyle displayLarge = TextStyle(
-    fontSize: 36,
-    height: 44 / 36,
-    fontWeight: FontWeight.w700,
-  );
+  static const List<FontFeature> _tabular = <FontFeature>[
+    FontFeature.tabularFigures(),
+  ];
 
-  static const TextStyle headlineLarge = TextStyle(
-    fontSize: 28,
-    height: 36 / 28,
-    fontWeight: FontWeight.w700,
-  );
+  static TextStyle serif(double size, {double? height, Color? color}) =>
+      TextStyle(
+        fontFamily: serifFamily,
+        fontSize: size,
+        height: height,
+        fontWeight: FontWeight.w400,
+        letterSpacing: size * -0.01,
+        color: color,
+        fontFeatures: _tabular,
+      );
 
-  static const TextStyle headlineSmall = TextStyle(
-    fontSize: 22,
-    height: 28 / 22,
-    fontWeight: FontWeight.w600,
-  );
+  static TextStyle sans(
+    double size, {
+    FontWeight weight = FontWeight.w400,
+    double? height,
+    double? letterSpacing,
+    Color? color,
+  }) =>
+      TextStyle(
+        fontFamily: sansFamily,
+        fontSize: size,
+        fontWeight: weight,
+        height: height,
+        letterSpacing: letterSpacing,
+        color: color,
+        fontFeatures: _tabular,
+      );
 
-  static const TextStyle titleLarge = TextStyle(
-    fontSize: 18,
-    height: 24 / 18,
-    fontWeight: FontWeight.w600,
-  );
+  // Display roles — Instrument Serif (type.title / heroTask / reflection).
+  static final TextStyle displayLarge = serif(44, height: 1.04);
+  static final TextStyle displayMedium = serif(38, height: 1.05);
+  static final TextStyle displaySmall = serif(36, height: 1.05);
+  static final TextStyle headlineLarge = serif(30, height: 1.08);
+  static final TextStyle headlineSmall = serif(22, height: 1.15);
 
-  static const TextStyle titleMedium = TextStyle(
-    fontSize: 16,
-    height: 22 / 16,
-    fontWeight: FontWeight.w600,
-  );
+  // Text roles — Geist.
+  static final TextStyle titleLarge = sans(18, weight: FontWeight.w600);
+  static final TextStyle titleMedium = sans(16, weight: FontWeight.w500);
+  static final TextStyle bodyLarge = sans(16, height: 1.5);
+  static final TextStyle bodyMedium = sans(15, height: 1.45);
+  static final TextStyle labelLarge = sans(15, weight: FontWeight.w600);
+  static final TextStyle labelMedium = sans(12.5, weight: FontWeight.w500);
 
-  static const TextStyle bodyLarge = TextStyle(
-    fontSize: 16,
-    height: 24 / 16,
-    fontWeight: FontWeight.w400,
-  );
+  /// Eyebrow: 11px uppercase with 0.08em tracking.
+  static final TextStyle labelSmall =
+      sans(11, weight: FontWeight.w500, letterSpacing: 11 * 0.08);
 
-  static const TextStyle bodyMedium = TextStyle(
-    fontSize: 14,
-    height: 20 / 14,
-    fontWeight: FontWeight.w400,
-  );
-
-  static const TextStyle labelLarge = TextStyle(
-    fontSize: 14,
-    height: 20 / 14,
-    fontWeight: FontWeight.w600,
-  );
-
-  static const TextStyle labelMedium = TextStyle(
-    fontSize: 12,
-    height: 16 / 12,
-    fontWeight: FontWeight.w600,
-  );
-
-  static const TextStyle labelSmall = TextStyle(
-    fontSize: 11,
-    height: 14 / 11,
-    fontWeight: FontWeight.w500,
-  );
-
-  /// Big balances (account/goal totals). Tabular figures keep digits
-  /// aligned when the value updates.
-  static const TextStyle currencyLarge = TextStyle(
-    fontSize: 32,
-    height: 38 / 32,
-    fontWeight: FontWeight.w700,
-    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-  );
+  /// Big balances (account/goal totals) — serif like the design's metrics.
+  static final TextStyle currencyLarge = serif(34, height: 1.08);
 
   /// Transaction-row-scale amounts.
-  static const TextStyle currencyMedium = TextStyle(
-    fontSize: 20,
-    height: 26 / 20,
-    fontWeight: FontWeight.w600,
-    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-  );
+  static final TextStyle currencyMedium = sans(15, weight: FontWeight.w500);
 }

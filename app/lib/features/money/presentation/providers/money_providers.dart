@@ -6,6 +6,7 @@ import '../../../../shared/models/money.dart';
 import '../../../goals/domain/entities/goal_entities.dart';
 import '../../../projects/domain/entities/project_entities.dart';
 import '../../accounts/domain/entities/financial_account.dart';
+import '../../bills/domain/entities/bill.dart';
 import '../../budgets/domain/entities/budget_entities.dart';
 import '../../financial_goals/domain/entities/financial_goal.dart';
 import '../../savings_goals/domain/entities/savings_goal.dart';
@@ -152,6 +153,39 @@ final FutureProviderFamily<Money, (BudgetItem, Budget)>
 ) {
   ref.watch(moneyAllTransactionsProvider);
   return ref.read(budgetRepositoryProvider).spentForItem(args.$1, args.$2);
+});
+
+/// Planned vs. actual spend, summed across every item in one budget — the
+/// dashboard's "budget pace" summary. Zero-value when the budget has no
+/// items yet.
+typedef BudgetPace = ({double planned, double actual, String currency});
+
+final FutureProviderFamily<BudgetPace, String> moneyBudgetPaceProvider =
+    FutureProvider.family<BudgetPace, String>((Ref ref, String budgetId) async {
+  final Budget? budget = await ref.watch(moneyBudgetProvider(budgetId).future);
+  if (budget == null) {
+    return const (planned: 0.0, actual: 0.0, currency: 'USD');
+  }
+  ref.watch(moneyAllTransactionsProvider);
+  final List<BudgetItem> items =
+      await ref.watch(moneyBudgetItemsProvider(budgetId).future);
+  double planned = 0;
+  double actual = 0;
+  for (final BudgetItem item in items) {
+    planned += item.plannedAmount.amount;
+    final Money spent =
+        await ref.read(budgetRepositoryProvider).spentForItem(item, budget);
+    actual += spent.amount;
+  }
+  return (planned: planned, actual: actual, currency: budget.currency);
+});
+
+// ------------------------------------------------------------------ bills --
+
+/// Bills due soon (or recently overdue), for the dashboard's upcoming list.
+final StreamProvider<List<Bill>> moneyUpcomingBillsProvider =
+    StreamProvider<List<Bill>>((Ref ref) {
+  return ref.watch(billRepositoryProvider).watchUpcoming(5);
 });
 
 // --------------------------------------------------------- savings goals --
