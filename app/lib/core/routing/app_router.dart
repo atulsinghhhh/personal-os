@@ -10,6 +10,7 @@ import '../../features/projects/presentation/screens/task_detail_screen.dart';
 import '../../features/money/presentation/screens/money_dashboard_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/planning/presentation/screens/plan_screen.dart';
+import '../../features/review/presentation/review_routes.dart';
 import '../../features/review/presentation/screens/review_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/today/presentation/screens/today_screen.dart';
@@ -143,6 +144,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               GoRoute(
                 path: RoutePaths.review,
                 builder: (_, _) => const ReviewScreen(),
+                routes: reviewSubRoutes,
               ),
             ],
           ),

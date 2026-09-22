@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/design_system/theme/app_theme_dark.dart';
 import 'core/design_system/theme/app_theme_light.dart';
+import 'core/providers/theme_provider.dart';
 import 'core/routing/app_router.dart';
 
 class PersonalOsApp extends ConsumerWidget {
@@ -18,7 +19,7 @@ class PersonalOsApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: buildAppThemeLight(),
       darkTheme: buildAppThemeDark(),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
     );
   }
